@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Inscriva",
+  "version": "0.0.1",
+  "identifier": "app.inscriva.desktop",
+  "build": {
+    "beforeDevCommand": "VITE_TAURI_DEV=1 pnpm --filter @inscriva/web dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm --filter @inscriva/web build",
+    "frontendDist": "../../../packages/web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Inscriva",
+        "width": 1280,
+        "height": 860,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "inscriva",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Web-first, local-first Markdown writing environment for long-form fiction",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @inscriva/web dev",
+    "dev:bridge": "pnpm --filter @inscriva/dev-bridge dev",
+    "dev:bridge:stop": "pnpm --filter @inscriva/dev-bridge stop",
+    "dev:all": "pnpm --parallel --filter @inscriva/web --filter @inscriva/dev-bridge dev",
+    "dev:desktop": "pnpm --filter @inscriva/desktop-macos dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @inscriva/web build",
+    "build:desktop": "pnpm --filter @inscriva/desktop-macos build",
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.9.0",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4"
+  }
+}

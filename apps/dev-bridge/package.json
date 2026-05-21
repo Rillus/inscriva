@@ -1,0 +1,30 @@
+{
+  "name": "@inscriva/dev-bridge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "stop": "lsof -ti :${INSCRIVA_BRIDGE_PORT:-3847} | xargs kill 2>/dev/null || true",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inscriva/bridge": "workspace:*",
+    "@inscriva/llm": "workspace:*",
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.3.3",
+    "@fastify/cors": "^11.0.1",
+    "@fastify/websocket": "^11.0.3",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  }
+}

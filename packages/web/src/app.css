@@ -1,0 +1,223 @@
+/*
+  Drawing-room theme: paper, tooled leather, mahogany panelling.
+  Bitmap textures: optional CC0 libraries — ambientcg.com, polyhaven.com,
+  or Wikimedia Commons — can be dropped in /public/textures and wired via
+  e.g. --texture-paper: url(/textures/paper.webp); (see --texture-paper below).
+*/
+
+:root {
+  /* Room shell (mahogany wainscot — procedural grain, no external assets) */
+  --room-mahogany: linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.12) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      #2a1810 0px,
+      #3d2418 2px,
+      #26150e 5px,
+      #432818 8px,
+      #2c170f 11px,
+      #3a2218 14px
+    ),
+    radial-gradient(ellipse 120% 80% at 50% 0%, #5a3828 0%, #2a1510 55%, #1a0d08 100%);
+
+  --texture-paper: url("/textures/paper.jpg");
+
+  /* Paper sheet (cream, fibrous specks via layered gradients) */
+  --surface-paper: var(--texture-paper),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(255, 255, 255, 0) 28%
+    ),
+    radial-gradient(ellipse 1.2px 1.8px at 20% 30%, rgba(90, 70, 50, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 1px 1.5px at 78% 62%, rgba(70, 55, 40, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 1.4px 2px at 55% 18%, rgba(85, 65, 45, 0.05) 0%, transparent 45%),
+    linear-gradient(178deg, #faf6ee 0%, #f2ebe0 45%, #ebe2d4 100%);
+
+  /* Tooled leather (sidebar) */
+  --surface-leather: var(--texture-leather),
+    radial-gradient(ellipse 140% 100% at 50% -20%, rgba(255, 255, 255, 0.08) 0%, transparent 45%),
+    linear-gradient(165deg, #5c4334 0%, #3d2b22 38%, #2c1f18 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.03) 0px,
+      transparent 1px,
+      transparent 3px,
+      rgba(255, 255, 255, 0.02) 4px
+    );
+
+  /* Optional royalty-free bitmaps: set --texture-paper: url(/textures/your-file.webp); */
+  --texture-paper: none;
+  --texture-leather: none;
+
+  /* Micro grain overlay (SVG feTurbulence, effectively CC0 / authored here) */
+  --grain-noise-svg: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+
+  --ornament-gold: #b8956a;
+  --ornament-gold-dim: #8a6e4e;
+
+  /* Semantic aliases (existing components use these) */
+  --bg: var(--room-mahogany);
+  --bg-elevated: var(--surface-paper);
+  --bg-muted: #d8cfc2;
+  --surface-input: #ffffff;
+  --text: #1a1510;
+  --text-muted: #5c5348;
+  --accent: #6b3d26;
+  --accent-soft: #f0e4d4;
+  --border: #c4b5a3;
+  --shadow-panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 6px rgba(62, 44, 30, 0.08);
+  --shadow-leather-deboss: inset 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-wood-bar: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  --sidebar-width: 260px;
+  --panel-width: 300px;
+  --font-ui: "Source Sans 3", system-ui, sans-serif;
+  --font-prose: "Literata", Georgia, serif;
+  --font-display: "Cinzel", "Palatino Linotype", Palatino, serif;
+
+  /* Leather rail: override ink for contrast (inherited by tree + nested UI) */
+  --text-on-leather: #f4ebe3;
+  --text-on-leather-muted: #c9b8a8;
+  --accent-on-leather: #e8c896;
+  --accent-soft-on-leather: rgba(232, 200, 150, 0.14);
+  --border-on-leather: rgba(20, 12, 8, 0.55);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+  background-attachment: fixed;
+}
+
+/* Subtle film grain over the whole room */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: var(--grain-noise-svg);
+  background-size: 180px 180px;
+  z-index: 9999;
+}
+
+#app {
+  height: 100%;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not(
+    [type="submit"]
+  ):not([type="reset"]),
+textarea,
+select {
+  background-color: var(--surface-input);
+  color: var(--text);
+}
+
+.llm-error-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(36rem, 92vw);
+  max-height: min(24rem, 70vh);
+  overflow: auto;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, #b45309 45%, var(--border));
+  border-radius: 10px;
+  background: var(--surface-paper, #fff);
+  box-shadow: 0 6px 24px rgba(42, 24, 16, 0.14);
+  font-family: var(--font-ui);
+}
+
+/* Narrow side rails: full width, no inner scroll clipping the summary */
+.llm-error-panel--rail {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  flex-shrink: 0;
+}
+
+.llm-error-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.llm-error-summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.llm-error-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.llm-error-details {
+  font-size: 0.75rem;
+}
+
+.llm-error-details summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.llm-error-details pre {
+  margin: 0.45rem 0 0;
+  padding: 0.5rem;
+  max-height: 10rem;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--bg-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-muted);
+}
+
+.llm-error-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.15rem;
+}
+
+.llm-error-dismiss {
+  font-size: 0.78rem;
+  padding: 0.32rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--text);
+  cursor: pointer;
+}
+
