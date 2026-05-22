@@ -237,6 +237,9 @@
   async function runGenerate() {
     if (!generate || !anchor || !onapply) return;
     if (anchor.kind === "continue" && !instruction.trim()) return;
+    if (anchor.kind === "selection" && intent === "rewrite" && !instruction.trim()) {
+      return;
+    }
 
     const applyOnapply = onapply;
     const snapshotFrom = anchor.from;
@@ -398,6 +401,10 @@
         <input type="radio" name="ai-intent" value="expand" bind:group={intent} />
         Expand selection
       </label>
+      <label class="intent-option">
+        <input type="radio" name="ai-intent" value="rewrite" bind:group={intent} />
+        Rewrite with changes
+      </label>
     </fieldset>
   {/if}
 
@@ -417,15 +424,19 @@
   <label class="instruction">
     {anchor.kind === "selection" && intent === "prompt"
       ? "Optional: add detail to your prompt"
-      : anchor.kind === "selection"
-        ? "Optional: how should this be expanded?"
-        : "What should happen next?"}
+      : anchor.kind === "selection" && intent === "rewrite"
+        ? "What should change?"
+        : anchor.kind === "selection"
+          ? "Optional: how should this be expanded?"
+          : "What should happen next?"}
     <textarea
       rows="2"
       bind:value={instruction}
       placeholder={anchor.kind === "continue"
         ? "Describe what to write next…"
-        : "Optional guidance…"}
+        : intent === "rewrite"
+          ? "e.g. She reacts with surprise instead of anger…"
+          : "Optional guidance…"}
       disabled={running}
     ></textarea>
   </label>
@@ -433,7 +444,9 @@
   <button
     type="button"
     class="primary"
-    disabled={running || (anchor.kind === "continue" && !instruction.trim())}
+    disabled={running ||
+      (anchor.kind === "continue" && !instruction.trim()) ||
+      (anchor.kind === "selection" && intent === "rewrite" && !instruction.trim())}
     onclick={runGenerate}
   >
     {running ? "Writing…" : "Generate"}

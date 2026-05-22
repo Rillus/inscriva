@@ -5,7 +5,10 @@
     anchorSidecarPath,
     appendNote,
     buildBookTree,
+    buildMovedPath,
+    buildNewFilePath,
     buildRenamedPath,
+    defaultNewFileDirectory,
     buildCanonIndex,
     buildSidecar,
     findUnlinkedPlants,
@@ -620,16 +623,41 @@
     }
   }
 
-  async function handleFileRename(from: string, newBase: string) {
+  const defaultCreateDir = $derived(
+    defaultNewFileDirectory(filePaths, activePath),
+  );
+
+  async function handleCreateFile(dir: string, base: string) {
     if (!bridge) return;
-    let to: string;
+    let path: string;
     try {
-      to = buildRenamedPath(from, newBase);
+      path = buildNewFilePath(dir, base);
     } catch (e) {
       gitMessage = e instanceof Error ? e.message : "Invalid file name";
       return;
     }
-    if (to === from) return;
+    if (filePaths.includes(path)) {
+      gitMessage = "A file with that name already exists";
+      return;
+    }
+
+    try {
+      await bridge.writeFile(path, "");
+      await refreshBook();
+      await openFile(path);
+      gitStatus = await bridge.gitStatus();
+      gitMessage = "";
+    } catch (e) {
+      gitMessage = e instanceof Error ? e.message : "Could not create file";
+    }
+  }
+
+  async function relocateFile(
+    from: string,
+    to: string,
+    failureMessage = "Could not move file",
+  ) {
+    if (!bridge || to === from) return;
 
     cancelPendingFileSave(saveTimer);
     saveTimer = undefined;
@@ -647,8 +675,34 @@
       gitStatus = await bridge.gitStatus();
       gitMessage = "";
     } catch (e) {
-      gitMessage = e instanceof Error ? e.message : "Rename failed";
+      gitMessage = e instanceof Error ? e.message : failureMessage;
     }
+  }
+
+  async function handleFileRename(from: string, newBase: string) {
+    let to: string;
+    try {
+      to = buildRenamedPath(from, newBase);
+    } catch (e) {
+      gitMessage = e instanceof Error ? e.message : "Invalid file name";
+      return;
+    }
+    await relocateFile(from, to, "Rename failed");
+  }
+
+  async function handleFileMove(from: string, toDir: string) {
+    let to: string;
+    try {
+      to = buildMovedPath(from, toDir);
+    } catch (e) {
+      gitMessage = e instanceof Error ? e.message : "Invalid move";
+      return;
+    }
+    if (filePaths.includes(to)) {
+      gitMessage = "A file with that name already exists in that folder";
+      return;
+    }
+    await relocateFile(from, to);
   }
 
   async function persistFile(path: string, content: string) {
@@ -760,7 +814,7 @@
   <div class="app" data-host={host}>
     <header class="topbar">
       <div class="brand">
-        <span class="logo">Inscriva</span>
+        <img class="logo" src="/inscriva.svg" width="129" height="48" alt="Inscriva" />
         <span class="book-title">{bookTitle}</span>
       </div>
 
@@ -815,7 +869,15 @@
       {/if}
       <aside class="sidebar">
         {#if fileTree}
-          <FileTree tree={fileTree} {activePath} onSelect={openFile} onRename={handleFileRename} />
+          <FileTree
+            tree={fileTree}
+            {activePath}
+            defaultCreateDir={defaultCreateDir}
+            onSelect={openFile}
+            onRename={handleFileRename}
+            onCreate={handleCreateFile}
+            onMove={handleFileMove}
+          />
         {/if}
       </aside>
 
@@ -849,11 +911,13 @@
             onviewrestored={() => {
               restoreViewState = null;
             }}
-            onpresentationprepare={() =>
+            onpresentationprepare={() => {
+              if (!awaitingPresentation) return;
               setLoadState(
                 "Styling document",
                 activePath ? fileDisplayName(activePath) : undefined,
-              )}
+              );
+            }}
             onpresentationready={signalEditorReady}
             onviewstatechange={persistViewState}
             onselectionchange={(change) => {
@@ -963,19 +1027,16 @@
 
   .brand {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.75rem;
     min-width: 0;
   }
 
   .logo {
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 0.95rem;
-    color: var(--ornament-gold);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    display: block;
+    height: 2.5rem;
+    width: auto;
+    flex-shrink: 0;
   }
 
   .book-title {

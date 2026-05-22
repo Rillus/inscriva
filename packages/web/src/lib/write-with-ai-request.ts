@@ -45,6 +45,14 @@ export function buildWriteWithAiLlmRequest(opts: {
     };
   }
 
+  if (kind === "rewrite") {
+    return {
+      ...base,
+      selectionText: text,
+      userMessage: `Rewrite the Selection passage per the author note. Return only the revised passage—no commentary.\n\nAuthor note: ${prompt}`,
+    };
+  }
+
   return {
     ...base,
     selectionText: text,

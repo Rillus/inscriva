@@ -34,6 +34,7 @@
     wikilinkAutocomplete,
   } from "./codemirror-extensions.js";
   import { shouldReplaceEditorDocument } from "./editor-sync.js";
+  import { shouldNotifyPresentationLifecycle } from "./editor-presentation.js";
   import {
     readEditorSelection,
     type EditorSelection,
@@ -92,9 +93,17 @@
 
   function runPresentationPass(notifyReady = false) {
     if (!view) return;
-    onpresentationprepare?.();
     refreshMarkdownPreview(view, { fullDocument: notifyReady });
-    if (!notifyReady || !awaitPresentation || presentationSignalled) return;
+    if (
+      !shouldNotifyPresentationLifecycle(
+        notifyReady,
+        awaitPresentation,
+        presentationSignalled,
+      )
+    ) {
+      return;
+    }
+    onpresentationprepare?.();
     queueMicrotask(() => {
       queueMicrotask(() => {
         if (!view || presentationSignalled) return;

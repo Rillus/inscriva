@@ -51,8 +51,12 @@ export {
 } from "./sidecar-path.js";
 
 export {
+  buildMovedPath,
+  buildNewFilePath,
   buildRenamedPath,
+  defaultNewFileDirectory,
   fileBaseName,
+  fileDirectory,
   fileNameFromBase,
   validateFileBaseName,
 } from "./file-name.js";

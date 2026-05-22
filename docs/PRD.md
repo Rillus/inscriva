@@ -1,12 +1,12 @@
 # Inscriva — Product Requirements Document
 
 **Product name (working):** Inscriva  
-**Version:** PRD v0.4  
-**Date:** 17 May 2026  
+**Version:** PRD v0.5  
+**Date:** 21 May 2026  
 **Author:** Riley (with AI draft)  
 **Project hub:** [[Inscriva]]
 
-**Decisions locked:** web-first UI · sidecar-only anchors · one Git repo per book · all chapters treated equally · thin native shells for Mac/Android · **BYOK LLM** (bring your own API keys; no Inscriva-hosted inference in v1)
+**Decisions locked:** web-first UI · sidecar-only anchors · one Git repo per book · all chapters treated equally · thin native shells for Mac/Android · **BYOK LLM** (bring your own API keys; no Inscriva-hosted inference in v1) · **chapter-first workspace** (files remain source of truth; file tree optional) · **AI opt-in only** (recommendations may suggest when to invoke AI; never auto-call providers)
 
 ---
 
@@ -14,7 +14,9 @@
 
 Inscriva is a **web-first, local-first, Markdown-native writing environment** for long-form fiction. The **product is a web application** (HTML/CSS/TypeScript): editor, canon panel, chapter focus, and line notes. **Mac and Android** ship the **same built web app** inside a thin **Tauri 2** shell that provides filesystem access, Git, and reliable background sync.
 
-It behaves like Obsidian for navigation and editing, but is purpose-built for **book workflow**: canon context while you write, chapter intent always visible, notes anchored to paragraphs/sentences (sidecar-only—prose stays clean), quiet Git sync per book, and **scoped LLM assist** (draft, review, continuity) using **your own provider API keys**—OpenAI, Anthropic, Google Gemini, and others via a pluggable provider layer.
+It behaves like Obsidian for navigation and editing, but is purpose-built for **book workflow**: **chapter as the primary unit** (paired outline + draft + alignment in one workspace), canon context while you write, structure kept honest via **deterministic checks** plus **opt-in** scoped LLM assist, notes anchored to paragraphs/sentences (sidecar-only—prose stays clean), quiet Git sync per book, and **cast intelligence** (character appearances, dialogue concordance) derived from the repo index.
+
+**AI is never contacted without an explicit user action.** The app may **recommend** moments to consider AI (e.g. draft reached outline word target, editing an outline while a draft exists, stale alignment report)—always as dismissible, non-blocking UI, never as background inference.
 
 **One book = one Git repository.** Opening a repo opens that book. No multi-book vault. No special chapter types in the app—casebook, flashback, etc. are author labels in outline front matter only.
 
@@ -60,8 +62,8 @@ Local `.md` on disk, sidecar in repo, and non-intrusive Git need capabilities br
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Web app (Vite + Svelte/React + CodeMirror 6)            │
-│  Editor · Chapter panel · Canon · Notes · Assist panel   │
-│  Indexer · Context builder (Session Pack) · LLM client   │
+│  Chapter workspace · Editor · Cast · Alignment · Notes   │
+│  Indexer · Book index · Recommendations · LLM (opt-in)   │
 └─────────────────────────┬────────────────────────────────┘
                           │ inscrivaBridge.* (IPC)
           ┌───────────────┼───────────────┐
@@ -100,6 +102,11 @@ Local `.md` on disk, sidecar in repo, and non-intrusive Git need capabilities br
 | **GFM + `[[wikilinks]]` + front matter** | ● | ● | ● | ● |
 | **Draft / Revise / Read modes** | ● | ● | ● | ● (Revise: notes drawer, not gutter) |
 | **File tree & chapter navigation** | ● | — | ● | ● |
+| **Chapter workspace (outline + draft + alignment)** | ◐ | — | ● | ◐ |
+| **Chapter board / status rail** | — | — | ● | ◐ |
+| **Deterministic alignment report** | ◐ | — | ● | ◐ |
+| **Cast index & character sheet** | — | — | ● | ◐ |
+| **AI recommendations (no auto-call)** | — | — | ● | ◐ |
 | **One repo = one book** | ● | — | ● | ● |
 | **Open existing local repo** | ● | — | ● | ◐ clone into app storage |
 | **New book wizard** | ● | — | ● | ● |
@@ -166,14 +173,20 @@ Local `.md` on disk, sidecar in repo, and non-intrusive Git need capabilities br
 | **Sync is separate** | Manual Git; stale copies across devices |
 | **AI context is manual** | Copy/paste Session Pack into ChatGPT; canon drops out; no tie to line notes |
 | **AI edits are untracked** | Pasted prose bypasses outline scope and continuity checks |
+| **File-first UI** | Outline and draft feel disconnected; hard to see if chapter goals are met |
+| **Character knowledge scattered** | Bible, drafts, and Scene Ledger must be searched manually for “who said what” |
+| **AI over-eager or absent** | Either manual Session Pack for every check, or tools that call models without clear scope |
 
 ### 4.2 What success looks like
 
-- Open **Ch07** on **Mac or phone** → outline + canon visible; same repo after sync.
+- Open **Ch07** in **chapter workspace** → outline, draft, alignment status, and cast for this chapter visible together; file tree available but not required.
 - Line notes survive paragraph moves (sidecar reconciliation).
 - Edit session with **no sync modals**; conflicts rare and explicit.
 - `.md` files open unchanged in Obsidian.
 - **“Draft Scene 2 per outline”** sends the right canon + chapter scope automatically; you approve before text hits the draft file.
+- **“Check chapter against outline”** runs deterministic checks instantly; AI course-correction runs only when you click **Run AI review**.
+- **Click “Cole”** → appearances across chapters, dialogue snippets, bible entry—jump to any mention in draft.
+- **Recommendations** (e.g. “Draft within 10% of word target—consider alignment check”) appear as hints; **no LLM call** until you confirm.
 - **API keys** stay in Keychain/Keystore—never in the Git repo or Markdown.
 
 ---
@@ -189,6 +202,9 @@ Local `.md` on disk, sidecar in repo, and non-intrusive Git need capabilities br
 5. **Git per book** — quiet sync via native bridge.
 6. **Obsidian-compatible Markdown** — portable prose.
 7. **Scoped LLM assist** — draft, review, and revision help with **bring-your-own-key** providers; human approves all prose changes.
+8. **Chapter-first structure** — navigation and health checks centred on paired chapters, not loose files.
+9. **Deterministic structure health** — word targets, plants, scene headings, must-include heuristics without spending tokens.
+10. **Opt-in AI with recommendations** — suggest when AI may help; never invoke providers in the background.
 
 ### 5.2 Non-goals (v1)
 
@@ -199,6 +215,8 @@ Local `.md` on disk, sidecar in repo, and non-intrusive Git need capabilities br
 - Replacing Obsidian for PKM.
 - Hosted multi-tenant SaaS.
 - Training on your manuscripts for a global model (no upload to Inscriva servers in v1).
+- **Background / ambient AI** — no idle polling of providers, no auto-summarise on save, no “copilot” that streams without a user gesture.
+- **Replacing canon files with a proprietary character database** — cast index is derived from Markdown; bible remains authoritative.
 
 ---
 
@@ -233,27 +251,42 @@ book-repo/
 | Role | Path pattern | Behaviour |
 |------|--------------|-----------|
 | Canon | `00 Canon/**` | Indexed, linked, hover |
-| Outline | `01 Outlines/Chapter Outlines/Ch*.md` | Paired with draft |
-| Draft | `02 Drafts/Chapters/Ch*.md` | Editor + anchors + notes |
-| Revision | `03 Revision/**` | Pass checklist |
+| Outline | `01 Outlines/Chapter Outlines/*.md` | Paired with draft; parsed for scenes/goals |
+| Draft | `02 Drafts/Chapters/*.md` | Editor + anchors + notes |
+| Revision | `03 Revision/**` | Pass checklist, Scene Ledger, optional alignment exports |
+| Book index (cache) | `.inscriva/index.json` | Rebuilt on watch; chapters, cast, alignment metadata (see §7.9) |
+| Alignment reports | `.inscriva/reports/` or `03 Revision/Alignment/` | Deterministic + optional saved AI reports (author choice) |
 
 **All chapters identical in the app.** Outline `Mode:` fields are display-only metadata.
 
-Default pair: `Ch01` prefix in outline + draft filenames → `.inscriva/chapter-map.json` for overrides.
+**Chapter pairing keys** (first match wins; then `chapter-map.json` overrides):
+
+| Pattern | Example | Key |
+|---------|---------|-----|
+| `ChNN` in filename | `Ch01 - The Eighth A.md` | `Ch01` |
+| `ChNN` in outline H1 | `# Ch01: The Cabbages…` | `Ch01` |
+| Numeric prefix | `01 - The Cabbages at Breakfast.md` | `Ch01` (normalise `01` → `Ch01`) |
+
+Reference: [[01.72 Monsterosso/Monsterosso]] uses numeric filenames with `ChNN` in outline titles—pairing must support this without forcing renames.
+
+**Outline dialects:** Parser supports at least (a) **template** sections (`## Story question`, `## Scenes` bullets, `## Turn`) and (b) **Monsterosso** sections (`## Turn by chapter end`, `## Scene N — Title` with per-scene Goal/Conflict/Outcome/Must include/Must NOT). Same chapter focus model feeds UI and context builder.
 
 ---
 
 ## 7. Core features (platform-agnostic spec)
 
-### 7.1 Editor
+### 7.1 Editor & navigation modes
 
-- Tree, fuzzy open, split panes (desktop), outline by headings, word count.
+**Primary navigation: chapter workspace** (see §7.8). **Secondary: file tree** — kept as optional drawer/tab (fuzzy open, canon edits, Master Outline, hub).
+
+- Split panes (desktop): draft | outline | alignment within workspace.
 - Modes: **Draft** | **Revise** | **Read**.
-- Mobile: single pane; notes in bottom sheet in Revise.
+- Mobile: chapter workspace stacks panes; file tree in menu; notes in bottom sheet in Revise.
+- Scene navigator (draft): jump between outline scenes; grey state when draft has no matching scene heading.
 
 ### 7.2 Chapter focus panel
 
-From paired outline: story question, turn, scenes, Must include / NOT, word target, continuity hooks, status. Banner: one-line “turn by chapter end” in Draft mode.
+From paired outline (both dialects): story question, turn, scenes, Must include / NOT (chapter-level and per-scene where parsed), word target, continuity hooks, status. Banner: one-line turn in Draft mode. **Goal checklist:** must-include items as checkboxes—auto-ticked by deterministic matchers where possible; manual override always available (no AI required).
 
 ### 7.3 Canon context engine
 
@@ -269,6 +302,8 @@ Index `00 Canon/`; aliases; wikilink graph. Inline hover, `[[` autocomplete, sid
 ### 7.5 Revision passes
 
 Structure, character, tone, continuity, line, read-aloud — mapped to UI assists; checklist sync to revision notes file.
+
+**Structure pass** integrates **deterministic alignment** (§7.9) first; AI `review-chapter-goals` offered as optional second step via recommendation or explicit **Run AI review**—never automatic.
 
 ### 7.6 Git sync (via bridge)
 
@@ -295,6 +330,8 @@ Inscriva includes **first-class AI writing and review** tied to book structure�
 | **Human in the loop** | AI output is **proposed** (diff/preview); user accepts, edits, or rejects before `writeFile` to draft `.md` |
 | **Clean prose** | Accepted text writes to `.md` only; prompts and chat live in `.inscriva/` or ephemeral UI—not in chapter files |
 | **Provider choice** | Per-task default model (e.g. fast model for continuity check, stronger for scene draft) |
+| **Opt-in only** | **No** LLM HTTP request without explicit user action (button, command palette, confirmed recommendation). Saving files, indexing, Git, and deterministic reports do **not** call providers. |
+| **Recommendations ≠ inference** | UI may suggest tasks (see §7.11); suggestions are local heuristics only until user confirms. |
 
 #### 7.7.2 Providers (MVP and extensibility)
 
@@ -350,12 +387,19 @@ Stored in app secure storage + optional `~/.inscriva/settings.json` (no secrets)
 | `expand-outline` | From outline file | Master outline + continuity | Scene bullets → new outline section |
 | `review-continuity` | Revise mode / line note | Continuity Log + Scene Ledger + selection | Issue list; optional patch per issue |
 | `review-voice` | Revise pass 4c | Style Guide + paragraph | Suggestions; no auto-apply |
-| `review-structure` | Pass 4a | Outline vs draft headings | Missing/extra beats |
+| `review-structure` | Pass 4a / alignment tab | Outline vs draft headings | Missing/extra beats (deterministic pre-check may run first) |
+| `review-chapter-goals` | Chapter workspace → **Run AI review**; confirmed recommendation | Full outline + full draft + canon + Scene Ledger | Structured report: per-scene goal met/partial/missing, turn, must NOT violations, quotes; **no auto-apply** |
+| `refresh-outline-from-draft` | Chapter workspace; confirmed recommendation | Draft + current outline | Proposed outline patches (scene outcomes, continuity hooks, status)—accept per section |
+| `summarise-character-arc` | Character sheet | Bible + mention snippets across drafts | Author-facing arc summary; does not edit bible without confirm |
 | `fix-paragraph` | Line note type `ai` or selection | Anchor quote + canon | Replacement paragraph → diff |
 | `brainstorm` | Hub / outline only | Monsterosso-style: bullets only | **Does not** write to draft without confirm |
-| `explain-canon` | Hover / palette | Single canon note | Plain-language summary for author |
+| `explain-canon` | Hover / palette / character sheet | Single canon note | Plain-language summary for author |
 
-**Hard rule (enforced in UI):** `draft-scene` and `fix-paragraph` require an open paired chapter; `brainstorm` cannot target `02 Drafts/` without explicit confirm.
+**Hard rules (enforced in UI):**
+
+- `draft-scene` and `fix-paragraph` require an open paired chapter.
+- `brainstorm` cannot target `02 Drafts/` without explicit confirm.
+- All `review-*` and `refresh-outline-from-draft` tasks require user initiation; recommendations must show **Run** / **Dismiss** / **Don’t ask again for this chapter**.
 
 #### 7.7.6 Assist UI
 

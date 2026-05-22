@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="258mm"
+   height="96mm"
+   viewBox="0 0 258 96"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="inscriva.svg"
+   inkscape:version="1.2.2 (b0a84865, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.58502668"
+     inkscape:cx="606.80993"
+     inkscape:cy="358.10332"
+     inkscape:window-width="1323"
+     inkscape:window-height="833"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#b8956a;fill-opacity:1;stroke-width:0.273785"
+       d="m 26.013892,2.4522662 c 0,0 -11.279784,0.33944 -12.938227,-1.50400897 -0.878818,-0.97685497 0.92714,22.01355877 0.92714,22.01355877 0,0 3.948742,0.249073 3.948742,7.582056 0,6.148915 -17.27218527,11.508012 -16.8620043,22.049009 C 1.4997247,63.133882 19.262233,85.484175 25.622249,94.193843 24.584046,92.009962 5.7897774,61.978319 5.4832927,52.630687 5.2133657,44.398071 20.726328,35.833115 21.081327,30.701446 c 0.18204,-2.631475 -4.921049,-9.549415 -4.921049,-9.549415 0,0 -1.263487,-13.7725045 -0.299198,-15.3993453 0.799655,-1.3490894 3.712211,-0.11857 5.681925,-0.5386807 3.540178,-0.7550657 4.470887,-2.7617388 4.470887,-2.7617388 z"
+       id="path843"
+       sodipodi:nodetypes="cscsscsscssc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.9111px;font-family:Cinzel;-inkscape-font-specification:Cinzel;fill:#b8956a;fill-opacity:1;stroke-width:0.264583"
+       x="32.594013"
+       y="94.305428"
+       id="text1168"><tspan
+         sodipodi:role="line"
+         id="tspan1166"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.9111px;font-family:Cinzel;-inkscape-font-specification:Cinzel;fill:#b8956a;fill-opacity:1;stroke-width:0.264583"
+         x="32.594013"
+         y="94.305428"><tspan
+           style="letter-spacing:-3.24115px;word-spacing:0.529167px;fill:#b8956a;fill-opacity:1"
+           id="tspan3470"><tspan
+   id="tspan3550"
+   style="letter-spacing:-8.7974px;fill:#b8956a;fill-opacity:1">n</tspan><tspan
+   id="tspan3554"
+   style="letter-spacing:-6.41615px;fill:#b8956a;fill-opacity:1">s</tspan><tspan
+   id="tspan3590"
+   style="letter-spacing:-8.7974px;fill:#b8956a;fill-opacity:1">c</tspan><tspan
+   id="tspan3506"
+   style="letter-spacing:-7.73906px;fill:#b8956a;fill-opacity:1">r</tspan>i<tspan
+   id="tspan3486"
+   style="letter-spacing:-15.4437px;fill:#b8956a;fill-opacity:1">v</tspan></tspan><tspan
+           style="letter-spacing:-10.9458px;word-spacing:0px;fill:#b8956a;fill-opacity:1"
+           id="tspan3462">a</tspan></tspan></text>
+    <circle
+       style="fill:#b8956a;fill-opacity:1;stroke-width:0.264583"
+       id="path3656"
+       cx="27.59683"
+       cy="55.040188"
+       r="3.8778057" />
+    <path
+       style="fill:#b8956a;fill-opacity:1;stroke-width:0.264583"
+       d="m 24.347838,92.566702 c 0,0 1.2876,-0.7511 1.2876,-2.3606 l 0.183802,-33.47759 3.817097,0.107299 0.0765,33.906791 c 0,0 0.1073,1.1803 1.3949,2.0387 1.2876,0.858397 2.847532,0.887264 3.705933,0.887264 0.858398,0 0.586069,0.635627 0.586069,0.635627 L 25.391501,94.176196 c 0,0 -0.509069,-0.810127 -1.043665,-1.609494 z"
+       id="path3658"
+       sodipodi:nodetypes="cscccssccc" />
+  </g>
+</svg>

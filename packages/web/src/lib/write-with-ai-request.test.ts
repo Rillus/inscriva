@@ -52,6 +52,21 @@ describe("buildWriteWithAiLlmRequest", () => {
     });
   });
 
+  it("builds a rewrite request with selection and author note", () => {
+    expect(
+      buildWriteWithAiLlmRequest({
+        ...base,
+        kind: "rewrite",
+        text: "She slammed the door.",
+        prompt: "She reacts with quiet surprise instead of anger.",
+      }),
+    ).toMatchObject({
+      selectionText: "She slammed the door.",
+      userMessage:
+        "Rewrite the Selection passage per the author note. Return only the revised passage—no commentary.\n\nAuthor note: She reacts with quiet surprise instead of anger.",
+    });
+  });
+
   it("builds a continue request with author instruction", () => {
     expect(
       buildWriteWithAiLlmRequest({

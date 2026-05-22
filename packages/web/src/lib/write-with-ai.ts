@@ -26,12 +26,12 @@ import {
 } from "./write-with-ai-context.js";
 
 export type WriteWithAiGenerateContext = {
-  kind: "continue" | "prompt" | "expand";
+  kind: "continue" | "prompt" | "expand" | "rewrite";
   from: number;
   to: number;
   /** Sentence or selected passage text. */
   text: string;
-  /** Extra author instruction (optional for prompt/expand). */
+  /** Extra author instruction (optional for prompt/expand; required for rewrite/continue). */
   prompt: string;
   maxOutputTokens?: number;
 };
@@ -201,7 +201,10 @@ async function submitWriteWithAi(
 
   if (kind === "prompt" && !prompt.trim() && anchor.kind === "selection") {
     prompt = "";
-  } else if (kind === "continue" && !prompt.trim()) {
+  } else if (
+    (kind === "continue" || kind === "rewrite") &&
+    !prompt.trim()
+  ) {
     closeWriteWithAi(view);
     return;
   }
@@ -395,6 +398,7 @@ class WriteWithAiPlugin {
 
         addIntent("prompt", "Use selection as prompt");
         addIntent("expand", "Expand selection");
+        addIntent("rewrite", "Rewrite with changes");
         panel.append(intentRow);
       }
 
@@ -404,9 +408,11 @@ class WriteWithAiPlugin {
       input.placeholder =
         anchor.kind === "selection" && intent === "prompt"
           ? "Optional: add detail to your prompt…"
-          : anchor.kind === "selection"
-            ? "Optional: how should this be expanded?"
-            : "Describe what to write next…";
+          : anchor.kind === "selection" && intent === "rewrite"
+            ? "What should change? e.g. She reacts with surprise…"
+            : anchor.kind === "selection"
+              ? "Optional: how should this be expanded?"
+              : "Describe what to write next…";
       input.setAttribute("aria-label", "Prompt for AI writing");
 
       const actions = document.createElement("div");

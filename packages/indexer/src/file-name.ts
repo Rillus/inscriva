@@ -30,6 +30,52 @@ export function validateFileBaseName(base: string): string | null {
   return null;
 }
 
+export function fileDirectory(path: string): string {
+  const slash = path.lastIndexOf("/");
+  const backslash = path.lastIndexOf("\\");
+  const splitAt = Math.max(slash, backslash);
+  return splitAt >= 0 ? path.slice(0, splitAt) : "";
+}
+
+export function buildMovedPath(from: string, toDir: string): string {
+  const fileName = from.split(/[/\\]/).pop();
+  if (!fileName) throw new Error("Invalid file path");
+
+  const normalisedDir = toDir.replace(/\\/g, "/").replace(/\/$/, "");
+  const currentDir = fileDirectory(from);
+  if (normalisedDir === currentDir) return from;
+
+  return normalisedDir ? `${normalisedDir}/${fileName}` : fileName;
+}
+
+export function buildNewFilePath(dir: string, base: string): string {
+  const error = validateFileBaseName(base);
+  if (error) throw new Error(error);
+
+  const fileName = fileNameFromBase(base);
+  const normalisedDir = dir.replace(/\\/g, "/").replace(/\/$/, "");
+  return normalisedDir ? `${normalisedDir}/${fileName}` : fileName;
+}
+
+/** Suggested folder for a new markdown file in an open book. */
+export function defaultNewFileDirectory(
+  filePaths: string[],
+  activePath?: string | null,
+): string {
+  if (activePath) {
+    const slash = activePath.lastIndexOf("/");
+    const backslash = activePath.lastIndexOf("\\");
+    const splitAt = Math.max(slash, backslash);
+    if (splitAt >= 0) return activePath.slice(0, splitAt);
+  }
+
+  if (filePaths.some((p) => p.startsWith("02 Drafts/Chapters/"))) {
+    return "02 Drafts/Chapters";
+  }
+
+  return "";
+}
+
 export function buildRenamedPath(oldPath: string, newBase: string): string {
   const error = validateFileBaseName(newBase);
   if (error) throw new Error(error);

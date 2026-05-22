@@ -186,7 +186,7 @@
 
 <div class="welcome">
   <div class="card">
-    <h1>Inscriva</h1>
+    <img class="wordmark" src="/inscriva.svg" width="172" height="64" alt="Inscriva" />
     <p class="lede">Local-first writing for long-form fiction. One book, one Git repo.</p>
 
     <div class="tabs">
@@ -441,13 +441,11 @@
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), var(--shadow-panel-inset);
   }
 
-  h1 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    font-size: 1.75rem;
+  .wordmark {
+    display: block;
+    margin: 0 auto 0.5rem;
+    height: 3.25rem;
+    width: auto;
   }
 
   .lede {

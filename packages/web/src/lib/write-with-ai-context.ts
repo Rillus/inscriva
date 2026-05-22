@@ -3,7 +3,7 @@ import { isAtSentenceEnd, sentenceTextAt } from "./sentence-bounds.js";
 
 export type WriteWithAiKind = "continue" | "selection";
 
-export type WriteWithAiIntent = "prompt" | "expand";
+export type WriteWithAiIntent = "prompt" | "expand" | "rewrite";
 
 export type WriteWithAiAnchor = {
   from: number;
