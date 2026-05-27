@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-27T20:34:23.895Z",
+  "chapters": [
+    {
+      "key": "Ch01",
+      "title": "The Eighth A",
+      "outline": "01 Outlines/Chapter Outlines/Ch01 - The Eighth A.md",
+      "draft": "02 Drafts/Chapters/Ch01 - The Eighth A.md",
+      "draftWordCount": 119,
+      "wordTarget": {
+        "min": 2400,
+        "max": 2400
+      }
+    }
+  ]
+}
