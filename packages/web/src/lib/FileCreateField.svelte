@@ -49,7 +49,7 @@
   }
 </script>
 
-<div class="create-field">
+<div class="create-field surface-paper-ink">
   <p class="create-hint">
     {#if directory}
       New file in {directory}/
@@ -80,28 +80,35 @@
     flex-direction: column;
     gap: 0.2rem;
     padding: 0.5rem 0.5rem 0.35rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-on-paper, var(--border));
+    background: var(--surface-input);
   }
 
   .create-hint {
     margin: 0;
     font-size: 0.72rem;
-    color: var(--text-muted);
+    color: var(--ink-on-paper-muted, var(--text-muted));
   }
 
   .create-input {
     width: 100%;
     min-width: 0;
     padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-on-paper, var(--border));
     border-radius: 4px;
     font: inherit;
-    background: var(--bg-elevated);
-    color: var(--text);
+    background-color: var(--surface-input);
+    color: var(--ink-on-paper, var(--text));
+  }
+
+  .create-input::placeholder {
+    color: var(--ink-on-paper-muted, var(--text-muted));
+    opacity: 1;
   }
 
   .create-input.invalid {
     border-color: #b45309;
+    color: var(--ink-on-paper, var(--text));
   }
 
   .create-error {

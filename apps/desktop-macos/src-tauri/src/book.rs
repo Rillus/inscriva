@@ -142,6 +142,22 @@ pub fn rename_file(from: String, to: String, state: State<Mutex<BookState>>) -> 
     Ok(())
 }
 
+#[tauri::command]
+pub fn delete_file(path: String, state: State<Mutex<BookState>>) -> Result<(), String> {
+    let root = require_root(&state)?;
+    let full = safe_join(root.clone(), &path)?;
+    if !full.exists() {
+        return Err(format!("File not found: {path}"));
+    }
+    fs::remove_file(&full).map_err(|e| e.to_string())?;
+
+    let sidecar = safe_join(root, &anchor_sidecar_path(&path))?;
+    if sidecar.exists() {
+        let _ = fs::remove_file(sidecar);
+    }
+    Ok(())
+}
+
 #[derive(serde::Deserialize)]
 pub struct NewBookOptions {
     pub title: String,

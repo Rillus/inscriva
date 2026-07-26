@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   clampCaret,
+  deleteFileInSession,
   loadBookEditorSession,
   loadLastBookPath,
+  renameFileInSession,
   saveBookEditorSession,
   saveFileViewState,
   saveLastBookPath,
@@ -91,5 +93,38 @@ describe("editor-session", () => {
     const session = loadBookEditorSession("/books/demo");
     expect(session?.activePath).toBe("new.md");
     expect(session?.files["old.md"]).toBeDefined();
+  });
+
+  it("renames a file entry in session storage", () => {
+    saveFileViewState("/books/demo", "a.md", {
+      caret: { from: 1, to: 1 },
+      scrollTop: 0,
+    });
+    touchActiveFile("/books/demo", "a.md");
+    renameFileInSession("/books/demo", "a.md", "b.md");
+
+    const session = loadBookEditorSession("/books/demo");
+    expect(session?.activePath).toBe("b.md");
+    expect(session?.files["b.md"]).toBeDefined();
+    expect(session?.files["a.md"]).toBeUndefined();
+  });
+
+  it("removes a deleted file from session storage", () => {
+    saveFileViewState("/books/demo", "keep.md", {
+      caret: { from: 0, to: 0 },
+      scrollTop: 0,
+    });
+    saveFileViewState("/books/demo", "gone.md", {
+      caret: { from: 5, to: 5 },
+      scrollTop: 40,
+    });
+    touchActiveFile("/books/demo", "gone.md");
+
+    deleteFileInSession("/books/demo", "gone.md");
+
+    const session = loadBookEditorSession("/books/demo");
+    expect(session?.activePath).toBe("keep.md");
+    expect(session?.files["gone.md"]).toBeUndefined();
+    expect(session?.files["keep.md"]).toBeDefined();
   });
 });

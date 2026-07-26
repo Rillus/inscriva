@@ -1,5 +1,9 @@
 import { RangeSetBuilder } from "@codemirror/state";
-import { Decoration, type DecorationSet } from "@codemirror/view";
+import {
+  Decoration,
+  type DecorationSet,
+  type WidgetType,
+} from "@codemirror/view";
 
 type QueuedDecoration = {
   from: number;
@@ -21,6 +25,22 @@ export class MarkdownDecorationQueue {
       from,
       to,
       deco: Decoration.mark({ class: className }),
+    });
+  }
+
+  line(lineFrom: number, className: string) {
+    this.spans.push({
+      from: lineFrom,
+      to: lineFrom,
+      deco: Decoration.line({ class: className }),
+    });
+  }
+
+  widget(pos: number, widget: WidgetType, className?: string) {
+    this.spans.push({
+      from: pos,
+      to: pos,
+      deco: Decoration.widget({ widget, side: -1, class: className }),
     });
   }
 

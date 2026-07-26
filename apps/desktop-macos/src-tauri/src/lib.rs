@@ -106,6 +106,7 @@ pub fn run() {
             book::read_file,
             book::write_file,
             book::rename_file,
+            book::delete_file,
             book::create_book,
             book::get_recents,
             book::add_recent,

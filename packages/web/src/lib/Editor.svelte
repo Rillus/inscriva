@@ -267,6 +267,21 @@
             paddingLeft: "0.75rem",
             color: "var(--text-muted)",
           },
+          ".cm-line.cm-md-list-item": {
+            paddingLeft: "0.15rem",
+          },
+          ".cm-md-list-bullet-wrap": {
+            display: "inline-block",
+            verticalAlign: "baseline",
+          },
+          ".cm-md-list-bullet": {
+            display: "inline-block",
+            minWidth: "1.35em",
+            marginRight: "0.2em",
+            color: "var(--text-muted)",
+            userSelect: "none",
+            fontVariantNumeric: "tabular-nums",
+          },
           ".cm-md-table-header": { fontWeight: "700" },
           ".cm-md-table-cell": { padding: "0 0.35em" },
           ".cm-md-hr": {

@@ -184,6 +184,30 @@ describe("buildLivePreviewDecorations", () => {
     expect(hidesHrMarkup).toBe(false);
   });
 
+  it("renders bullet widgets and hides list marks when inactive", () => {
+    const doc = "- first item\n- second item";
+    const state = gfmState(doc, EditorSelection.cursor(doc.length));
+    let bulletWidgets = 0;
+    let hidesListMark = false;
+    buildLivePreviewDecorations(state).between(0, state.doc.length, (from, to, deco) => {
+      if (deco.spec.widget) bulletWidgets++;
+      if (deco.spec.class === "cm-md-mark-hidden" && from === 0 && to >= 2) {
+        hidesListMark = true;
+      }
+    });
+    expect(bulletWidgets).toBeGreaterThanOrEqual(2);
+    expect(hidesListMark).toBe(true);
+  });
+
+  it("shows raw list markup while the cursor is on a list item", () => {
+    const state = gfmState("- active item", EditorSelection.cursor(2));
+    let bulletWidgets = 0;
+    buildLivePreviewDecorations(state).between(0, state.doc.length, (_f, _t, deco) => {
+      if (deco.spec.widget) bulletWidgets++;
+    });
+    expect(bulletWidgets).toBe(0);
+  });
+
   it("shows raw --- markup while the cursor is on a horizontal rule", () => {
     const doc = "Before\n\n---\n\nAfter";
     const hrFrom = doc.indexOf("---");

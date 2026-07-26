@@ -30,7 +30,7 @@ describe("parseChapterFocus", () => {
 
     expect(focus.storyQuestion).toBe("Will Mara speak?");
     expect(focus.turn).toBe("She names the cost.");
-    expect(focus.scenes).toEqual(["Breakfast", "Tide"]);
+    expect(focus.scenes.map((s) => s.title)).toEqual(["Breakfast", "Tide"]);
     expect(focus.mustInclude).toEqual(["Table"]);
     expect(focus.notList).toEqual(["Backstory"]);
     expect(focus.wordTarget).toBe("2400");

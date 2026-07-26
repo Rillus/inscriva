@@ -1,7 +1,7 @@
 # Inscriva — Product Requirements Document
 
 **Product name (working):** Inscriva  
-**Version:** PRD v0.5  
+**Version:** PRD v0.6  
 **Date:** 21 May 2026  
 **Author:** Riley (with AI draft)  
 **Project hub:** [[Inscriva]]
@@ -253,9 +253,10 @@ book-repo/
 | Canon | `00 Canon/**` | Indexed, linked, hover |
 | Outline | `01 Outlines/Chapter Outlines/*.md` | Paired with draft; parsed for scenes/goals |
 | Draft | `02 Drafts/Chapters/*.md` | Editor + anchors + notes |
-| Revision | `03 Revision/**` | Pass checklist, Scene Ledger, optional alignment exports |
-| Book index (cache) | `.inscriva/index.json` | Rebuilt on watch; chapters, cast, alignment metadata (see §7.9) |
-| Alignment reports | `.inscriva/reports/` or `03 Revision/Alignment/` | Deterministic + optional saved AI reports (author choice) |
+| Revision | `03 Revision/**` | Pass checklist, Scene Ledger, **author-facing reports** (alignment, writing log) |
+| Book index (cache) | `.inscriva/index.json` | Rebuilt on watch; chapters, cast, alignment metadata (see §7.9) — technical cache, not primary UI |
+| Alignment reports | `.inscriva/reports/` + **`03 Revision/Alignment/`** | JSON cache in `.inscriva/`; human-readable `.md` in file tree (see §7.9) |
+| Writing sessions | `.inscriva/writing-sessions.jsonl` + **`03 Revision/Writing log.md`** | Machine log + author-facing discipline log (see §7.12) |
 
 **All chapters identical in the app.** Outline `Mode:` fields are display-only metadata.
 
@@ -314,7 +315,7 @@ Structure, character, tone, continuity, line, read-aloud — mapped to UI assist
 | Quit / background | flush |
 | Push rejected | pull --rebase; on conflict → pause + notify |
 
-`.inscriva/config.json`: `bookTitle`, `remote`, `branch`, `autosaveIdleSeconds`, etc.
+`.inscriva/config.json`: `bookTitle`, `remote`, `branch`, `autosaveIdleSeconds`, `recommendations` (thresholds, per-rule toggles), `alignmentExportPath`, `castGeneratedPath`, canon path overrides, etc.
 
 ### 7.7 LLM assist (BYOK)
 
@@ -421,6 +422,175 @@ clearApiKey(provider: string): void
 
 Rust (or shell) performs HTTPS to provider; web sends structured `LlmRequest` only.
 
+### 7.8 Chapter-first workspace
+
+**Primary object:** a **chapter** (paired outline + draft + derived metadata), not a single file path.
+
+#### 7.8.1 Chapter rail / board
+
+- List all chapters from book index: key, title, status (from outline `## Status` / front matter), word count vs target, alignment summary (ok / warnings / stale / not run).
+- **Drift badges** on row: e.g. unlinked plants, outline/draft word-count band, “alignment not run since last edit”.
+- Click chapter → open **chapter workspace** (does not require using file tree).
+- Optional **board view:** columns by status (Outlined → Drafting → Aligned → Locked)—labels from author outline, not app-enforced chapter types.
+
+#### 7.8.2 Chapter workspace layout (desktop)
+
+| Pane / tab | Content |
+|------------|---------|
+| **Draft** | Chapter prose editor (existing CM6 + canon hover + Write with AI) |
+| **Outline** | Paired outline—editable in place; wikilinks to canon |
+| **Alignment** | Deterministic report + saved AI reports + actions (see §7.9) |
+| **Cast** | Characters detected in this chapter (from cast index); click → character sheet |
+
+Opening any paired file from the file tree should switch the workspace to that chapter (same shell), not an isolated single-file mode.
+
+#### 7.8.3 Outline ↔ draft coupling in UI
+
+- Always load **both** outline and draft when a chapter is selected.
+- Editing outline while draft exists: show **read-only draft excerpt** or word-count strip in outline pane; enable recommendation **Compare outline to draft** (§7.11).
+- Editing draft: chapter focus panel + scene navigator reflect parsed outline; plant banner (existing) remains deterministic.
+
+#### 7.8.4 File tree (retained)
+
+- Available as **Files** view via a **toggle** from chapter view (same shell; not a separate app mode).
+- **Default:** chapter view (rail + workspace). File tree is secondary.
+- User preference (app settings): `navigationDefault` = `chapter` | `files` | `last used` (default **`chapter`**).
+
+### 7.9 Alignment & structure health
+
+**Intent:** Answer “are we on course for this chapter’s goals?” with **deterministic checks first**, **AI interpretation second** (opt-in).
+
+#### 7.9.1 Deterministic alignment (no LLM)
+
+Rebuilt on index pass and on demand when user opens Alignment tab or clicks **Refresh checks**:
+
+| Check | Source | Output |
+|-------|--------|--------|
+| Word count | Draft vs outline target (range or single) | ok / under / over (default band **90–110%**, locked) |
+| Plants | Outline continuity vs draft (`findUnlinkedPlants`) | List missing `P##` |
+| Scene headings | Outline `## Scene N` vs draft headings | Matched / missing / extra |
+| Must include | Outline bullets vs draft (keyword/heuristic per item) | Per-item hit / miss / uncertain |
+| Must NOT | Forbidden terms/phrases in draft | Violation list |
+| Turn | Optional heuristic (e.g. keywords near chapter end)—low confidence, flagged as heuristic only | hint only |
+
+On **Refresh checks**, the app writes:
+
+1. **Cache:** `.inscriva/reports/{chapterKey}-alignment.json` (machine-readable; technical — not promoted in the file tree).
+2. **Author-facing report:** `03 Revision/Alignment/{chapterKey}.md` (always written when checks run — visible in the file tree for reading in Inscriva or Obsidian).
+
+`.inscriva/` holds organisation and implementation detail the author does not need day to day; **consumable outputs** (alignment reports, writing log, Scene Ledger, revision notes) live under normal book folders.
+
+#### 7.9.2 AI chapter goals review (`review-chapter-goals`)
+
+- **Trigger:** user only—**Run AI review** in Alignment tab, Revision Structure pass, or confirmed recommendation.
+- **Input:** paired outline + full draft + token-budgeted canon + Scene Ledger + deterministic report (so model and UI share facts).
+- **Output:** structured JSON rendered as report sections—not silent edits:
+  - Per scene: goal / conflict / outcome assessment with draft citations
+  - Story question and turn: met / partial / undermined
+  - Suggested outline updates (optional follow-up via `refresh-outline-from-draft`)
+- User may save AI report snapshot to `03 Revision/Alignment/` (and optional JSON cache under `.inscriva/reports/`).
+
+#### 7.9.3 Outline refresh from draft (`refresh-outline-from-draft`)
+
+- **Direction:** draft → outline (convergence after writing).
+- **Opt-in AI** proposes patches to scene Outcomes, continuity hooks, Status—**per-section accept**.
+- **No auto-write** to outline file without accept.
+- Deterministic-only alternative (Phase 2+): tick scene checkboxes and update Status manually from alignment UI without AI.
+
+### 7.10 Cast index & character sheet
+
+**Intent:** Click a character name → full picture across the book so far—without maintaining a separate database.
+
+#### 7.10.1 Cast index (derived)
+
+Built from:
+
+1. **Character Bible** — parse `### Name` sections (and tables) from `00 Canon/**` bible file(s); aliases from “also known as” and common nicknames (e.g. Cole / Agricole).
+2. **Draft scan** — all `02 Drafts/Chapters/*.md` for name/alias mentions at paragraph granularity (reuse anchor offsets where possible).
+3. **Dialogue extraction (heuristic)** — quoted speech and attribution patterns (`"…" said Cole`, em-dash dialogue); uncertain lines flagged, optional AI cleanup later (opt-in).
+
+Stored in `.inscriva/index.json` under `characters[]` (paths, mention ranges, chapter keys)—rebuilt on file watch.
+
+#### 7.10.2 Character sheet UI
+
+Opened from: draft click on recognised name, Cast tab in chapter workspace, canon hover **Open sheet**, command palette.
+
+| Section | Content |
+|---------|---------|
+| **Bible** | Canon excerpt + link to source file |
+| **Appearances** | Table: chapter, scenes, word count in chapter, first/last mention |
+| **Mentions** | Snippet list with jump-to-draft |
+| **Dialogue** | Aggregated quotes (heuristic) with chapter links |
+| **Drift** | Deterministic: bible fact vs conflicting mention (where rules exist); AI optional via `summarise-character-arc` |
+
+Optional **generated markdown** (book config): `00 Canon/Character Bible/_generated/{Name} - appearances.md`—gitignored or committed per author preference (open question).
+
+### 7.11 AI recommendations (when to consider LLM)
+
+Recommendations are **local, rule-based nudges**—they do **not** call providers. Each shows: short reason, suggested task, **Run**, **Dismiss**, optional **Don’t ask again** (per chapter or globally per rule id).
+
+| Rule ID | Condition (examples) | Suggested task |
+|---------|----------------------|----------------|
+| `word-target-near` | Draft word count within **90–110%** of outline target (locked default band) | `review-chapter-goals` or deterministic **Refresh checks** only |
+| `word-target-over` | Draft exceeds outline max | Deterministic refresh + optional `review-chapter-goals` |
+| `outline-while-draft-exists` | User focuses Outline tab and chapter has draft > N words | `review-chapter-goals` or side-by-side compare (deterministic first) |
+| `draft-idle-after-spurt` | No draft edits for X min after large paste/word spike | `review-chapter-goals` |
+| `unlinked-plants` | `findUnlinkedPlants` non-empty | Fix in draft or `review-continuity` |
+| `alignment-stale` | Draft/outline mtime newer than last alignment report | **Refresh checks** (deterministic) |
+| `alignment-warnings` | Deterministic report has warnings; user has not run AI review | `review-chapter-goals` |
+| `structure-pass-due` | Chapter status checkbox “draft complete” or manual **Mark ready for review** | Revision Structure pass |
+| `character-drift` | Mention conflicts with bible field (deterministic) | `explain-canon` or `summarise-character-arc` |
+
+**Settings** (`~/.inscriva/settings.json` + optional per-book overrides in `.inscriva/config.json`):
+
+- `recommendationsEnabled` (default true)
+- Per-rule enable/disable
+- Thresholds: word-target band (default **90–110%**, locked), idle minutes, minimum draft words for outline-compare hint
+- **Never** “auto-run AI on recommendation”—only **Run** triggers `llmStream`
+
+**UI placement:** chapter row badge, Alignment tab banner, subtle toast (dismissible), optional menu bar indicator—no modal blocking writing.
+
+### 7.12 Writing sessions & discipline
+
+**Intent:** Help the author track **time spent writing**, **words added this session**, and progress toward the **chapter word target**—with a durable log for discipline and retrospectives.
+
+#### 7.12.1 Session clock & live stats
+
+While a book is open and the user is editing a **draft** chapter:
+
+| Stat | Source |
+|------|--------|
+| **Session clock** | Elapsed **active** writing time (idle pause after ~2 min without edits; configurable later) |
+| **Words this session** | Net words added to the active draft since session start (`wordsAtEnd − wordsAtStart`, floored at 0) |
+| **Target words** | Parsed from paired outline `## Word target` (single or range; display range or midpoint in UI) |
+| **Progress** | Draft total word count vs target; band indicator uses locked **90–110%** (§7.11) |
+
+**UI placement:** compact status strip (chapter workspace header or app footer)—always visible in chapter view, not blocking the editor.
+
+#### 7.12.2 Persistence
+
+| Store | Path | Role |
+|-------|------|------|
+| Machine log | `.inscriva/writing-sessions.jsonl` | Append-only JSON lines per closed session (technical) |
+| Author log | `03 Revision/Writing log.md` | Markdown table rows appended on session end—**visible in file tree** |
+
+**Session end** triggers when: user closes the book, switches chapter (optional split session), or app quit (flush). Each closed session records: `chapterKey`, `draftPath`, `startedAt`, `endedAt`, `wordsAtStart`, `wordsAtEnd`, `wordsAdded`, `targetWords`, `activeSeconds`.
+
+#### 7.12.3 Discipline log format
+
+`03 Revision/Writing log.md` uses a fixed table header (created on first session if missing):
+
+```markdown
+# Writing log
+
+| Date | Chapter | Words added | Target | Active time |
+|------|---------|-------------|--------|-------------|
+```
+
+Authors can review history in Obsidian or Inscriva file view; the app may later add a simple **Sessions** summary panel (Phase 2a+).
+
+**Indexer:** `countWords`, `parseWordTarget`, `DEFAULT_WORD_TARGET_BAND` (0.9 / 1.1), and session record helpers in `packages/indexer` (implemented).
+
 ---
 
 ## 8. Repository layout (monorepo)
@@ -433,8 +603,8 @@ inscriva/                          # software repo (separate from Obsidian PRD f
 ├── packages/
 │   ├── web/                       # UI — ship first
 │   ├── bridge/                    # TS types + host detection
-│   ├── indexer/                   # MD parse, anchors, canon
-│   └── llm/                       # Provider adapters, prompts, context builder
+│   ├── indexer/                   # MD parse, anchors, canon, pairing, alignment, cast
+│   └── llm/                       # Provider adapters, prompts, context builder (opt-in)
 └── package.json
 ```
 
@@ -449,9 +619,12 @@ inscriva/                          # software repo (separate from Obsidian PRD f
 | **Copy Session Pack** | Still available for external tools (Cursor, web chat) |
 | **Export context bundle** | Zip canon + outline + excerpt |
 | **Note → Ask AI** | Line note type `ai` opens task with anchor quote |
-| **`inscriva/index.json`** | Glossary + chapter map (optional, for external agents) |
+| **`inscriva/index.json`** | Chapters, cast, alignment metadata, glossary (for UI + external agents) |
+| **Chapter workspace** | Primary writing/review surface for paired outline + draft |
+| **Deterministic alignment** | Reliable structure signal without tokens |
+| **AI recommendations** | Suggest when to invoke §7.7 tasks; never auto-call |
 
-See **§7.7** for full LLM spec.
+See **§7.7–§7.11** for full LLM and structure spec.
 
 ---
 
@@ -476,6 +649,9 @@ See **§7.7** for full LLM spec.
 | Obsidian round-trip | No broken rendering |
 | Web/Mac parity | Same `dist/` hash in shell as dev build |
 | LLM task success | User accepts ≥1 suggestion in >70% of assist sessions (qualitative beta) |
+| Alignment usefulness | Authors run deterministic check on ≥80% of “draft complete” chapters (beta) |
+| Zero background LLM calls | No provider requests without explicit user action (enforced in bridge audit) |
+| Character sheet latency | Open sheet with mentions in <1s for books ≤30 chapters (indexed) |
 
 ---
 
@@ -492,7 +668,7 @@ See **§7.7** for full LLM spec.
 
 - [x] Bridge: FS read/write, watch, Git pull/push/autosave (`apps/dev-bridge`)
 - [x] Bridge: secure key store (dev-bridge `~/.inscriva/keys.json`; Tauri Keychain commands)
-- [ ] Bridge: key management **UI** (API wired; settings screen ships with Phase 2)
+- [x] Bridge: key management **UI** (`SettingsModal`: BYOK keys + default models per provider)
 - [x] Web: tree, wikilinks, chapter pairing, chapter panel, canon hover
 - [x] Web: line notes gutter (desktop layout; revise mode)
 - [x] Web: welcome flow — open folder, GitHub OAuth clone, new book, recents
@@ -502,15 +678,45 @@ See **§7.7** for full LLM spec.
 - [x] Tauri Mac: feature parity with dev-bridge (`notify` watch, GitHub OAuth, git push on autosave)
 - [x] Notarisation: documented in README (manual release step; not CI-automated)
 
-### Phase 2 — LLM assist + revision (5–7 weeks)
+### Phase 2a — Structure & chapter workspace (4–6 weeks) ✓
 
-- [ ] `packages/llm`: OpenAI, Anthropic, Google adapters + context builder
-- [ ] Bridge: LLM proxy (streaming), key management UI
-- [ ] Assist panel: `draft-scene`, `fix-paragraph`, `review-continuity`, diff accept/reject
-- [ ] Settings: BYOK per provider, default models per task type
-- [ ] Revision pass modes + checklist; pass-specific review tasks
-- [ ] Plant `P##` linking; soft warnings
-- [ ] Session Pack export (for external tools) + “View context” before send
+- [x] Monsterosso outline parser (`Scene N`, turn-by-chapter-end, per-scene must/NOT) — `packages/indexer/src/outline-parse.ts`
+- [x] Chapter pairing: numeric `01` filenames + H1 `ChNN` — `chapter-map.json` overrides loaded (edit via file tree / manual JSON for now)
+- [ ] Chapter-map pairing **UI** (form in chapter rail)
+- [x] Chapter rail + chapter workspace (draft / outline / alignment tabs); **chapter view default**, toggle to file view
+- [x] Deterministic alignment report — cache `.inscriva/reports/` + export `03 Revision/Alignment/{chapterKey}.md` + Alignment tab
+- [x] Writing session clock + words/target strip; append `.inscriva/writing-sessions.jsonl` + `03 Revision/Writing log.md` (§7.12)
+- [x] Goal checklist (must-include heuristics + manual ticks)
+- [x] Scene navigator in draft pane
+- [x] Book index `.inscriva/index.json` (chapters, word counts, alignment timestamps)
+- [x] AI recommendations engine (local rules only; word-target band **90–110%**; no auto LLM)
+- [x] Plant checks in alignment panel + existing revision banner
+
+### Phase 2b — LLM assist + revision (5–7 weeks) — *in progress*
+
+- [x] `packages/llm`: OpenAI, Anthropic, Google adapters + context builder
+- [x] Bridge: LLM proxy (streaming) — `apps/dev-bridge` + Tauri `llm_stream`
+- [x] Assist panel: `draft-scene`, `fix-paragraph`, `review-continuity` / `review-voice` / `review-structure`, diff accept/reject
+- [x] Inline **Write with AI** (selection / paragraph; `ActionsPanel` + pending suggestion accept/reject)
+- [x] Settings: BYOK per provider, default models per provider
+- [x] Revision pass modes + checklist (`RevisionPanel`; plant banner via `findUnlinkedPlants`)
+- [x] “View context” before send (Assist panel; dev-bridge `/llm/preview`)
+- [ ] Tasks: `review-chapter-goals`, `refresh-outline-from-draft` (opt-in, per §7.11)
+- [ ] `expand-outline` / `brainstorm` in Assist task picker (prompts exist in `packages/llm`)
+- [ ] Settings: recommendation thresholds (depends on §7.11 engine — Phase 2a)
+- [ ] Structure pass → deterministic alignment then optional AI (alignment tab is Phase 2a)
+- [ ] Plant `P##` linking in draft; canon soft warnings
+- [ ] Session Pack export UI (backend + `fetchSessionPack`; no app action yet)
+- [ ] Bridge guard: reject `llmStream` unless request includes `userInitiated: true`
+
+### Phase 2c — Cast index (3–4 weeks)
+
+- [ ] Parse Character Bible into entities (Monsterosso single-file + per-character files)
+- [ ] Cast index build on watch; mention + dialogue heuristics
+- [ ] Character sheet UI + jump-to-draft
+- [ ] Click character name in editor → sheet
+- [ ] Task: `summarise-character-arc` (opt-in)
+- [ ] Optional generated `appearances.md` (book config)
 
 ### Phase 3 — Android + expansions (4–6 weeks)
 
@@ -520,6 +726,9 @@ See **§7.7** for full LLM spec.
 - [ ] Read-only sharing
 - [ ] Style Guide rule packs (deterministic + LLM)
 - [ ] Provider OAuth where APIs support it (research per vendor)
+- [ ] Chapter board view; mobile chapter workspace (◐)
+- [ ] Scene Ledger auto-suggest from draft headings (deterministic; AI optional)
+- [ ] Master Outline reconcile from chapter statuses (opt-in)
 
 ---
 
@@ -535,19 +744,44 @@ See **§7.7** for full LLM spec.
 | **Browser-only v1** | Not supported for real writing (bridge required) |
 | **LLM billing** | BYOK API keys only; no Inscriva token resale in v1 |
 | **AI edits** | Human approve before writing to draft `.md` |
+| **Primary navigation** | **Chapter view default**; toggle to file view; preference `chapter` \| `files` \| `last used` |
+| **`.inscriva/` role** | Technical/org cache (anchors, index, JSONL logs, machine reports)—not primary author surface |
+| **Consumable reports** | Alignment and writing discipline surfaced under `03 Revision/` in the file tree |
+| **Word-target band** | **90–110%** of outline target (recommendations + alignment UI) |
+| **LLM invocation** | Opt-in only; recommendations suggest, never auto-call |
+| **Structure truth** | Markdown files authoritative; `.inscriva/` caches are derived, rebuildable |
 
 ---
 
 ## 14. Open questions
 
-1. **Monterosso migration:** When to move to dedicated repo under `~/Writing/`?
-2. **Git host:** GitHub private vs self-hosted; LFS for PDFs?
-3. **New book template:** Skeleton only vs sample canon stubs?
-4. ~~**Dev without Tauri:** Local Node bridge for `npm run dev` — worth building?~~ **Done** — `apps/dev-bridge`, `pnpm dev:bridge`.
-5. **Scene Ledger:** Auto-suggest from headings (Phase 2+)?
-6. **Default models:** Ship recommended model IDs per provider/task, or force user to choose?
-7. **ai-log.jsonl:** Commit to book repo (team traceability) or gitignore (privacy)?
-8. **Local models:** Ollama via OpenAI-compatible URL—Phase 2 or 3?
+### 14.1 Product (resolved — May 2026)
+
+1. ~~**Default navigation**~~ → **Chapter view default**; toggle to file view (§7.8.4).
+2. ~~**Alignment export**~~ → JSON cache in `.inscriva/reports/`; **always** write human-readable `03 Revision/Alignment/{chapterKey}.md` to the file tree (§7.9).
+3. ~~**Word-target band**~~ → **90–110%** locked (§7.11; `DEFAULT_WORD_TARGET_BAND` in indexer).
+4. ~~**Writing discipline**~~ → Session clock, words added, target words in UI; machine log + `03 Revision/Writing log.md` (§7.12).
+
+### 14.2 Product (still open)
+
+5. **Outline compare in outliner:** When editing outline with draft present, show split pane by default or only on recommendation click?
+6. **Character bible shape:** Index single `Character Bible.md` (Monsterosso) vs folder of per-character files vs both—which is canonical for cast index v1?
+7. **Generated appearances files:** Gitignore `_generated/`, commit for Obsidian, or in-app only?
+8. **Recommendation aggressiveness:** Quiet (Alignment tab only) vs visible (toasts + chapter badges)—default?
+9. **“Mark draft complete”:** Explicit author control for structure-pass recommendations, or infer from outline Status checkboxes only?
+10. **AI report persistence:** Save full `review-chapter-goals` output to repo, or session-only unless user clicks Save?
+11. **Session idle threshold:** Default 2 min without edits before pausing session clock—confirm or adjust?
+
+### 14.3 Existing (unchanged until decided)
+
+12. **Monterosso migration:** When to move to dedicated repo under `~/Writing/`?
+13. **Git host:** GitHub private vs self-hosted; LFS for PDFs?
+14. **New book template:** Skeleton only vs sample canon stubs?
+15. ~~**Dev without Tauri:** Local Node bridge for `npm run dev` — worth building?~~ **Done** — `apps/dev-bridge`, `pnpm dev:bridge`.
+16. **Scene Ledger:** Auto-suggest from headings (Phase 3)—deterministic first?
+17. **Default models:** Ship recommended model IDs per provider/task, or force user to choose?
+18. **ai-log.jsonl:** Commit to book repo (team traceability) or gitignore (privacy)?
+19. **Local models:** Ollama via OpenAI-compatible URL—Phase 2b or 3?
 
 ---
 
@@ -593,15 +827,18 @@ interface InscrivaBridge {
 
 ```typescript
 interface LlmRequest {
-  taskId: 'draft-scene' | 'fix-paragraph' | 'review-continuity' | /* … */;
+  taskId: 'draft-scene' | 'fix-paragraph' | 'review-continuity' | 'review-chapter-goals' | /* … */;
   provider: 'openai' | 'anthropic' | 'google' | 'custom';
   model: string;
   bookId: string;
   chapterKey?: string;       // e.g. Ch01
+  userInitiated: true;       // required — bridge rejects if false
+  recommendationId?: string; // if launched from §7.11 suggestion
   anchorId?: string;
   selection?: { from: number; to: number };
   userMessage?: string;      // optional author instruction
   contextOverrides?: Partial<ContextBundle>;
+  deterministicReport?: object; // alignment JSON from §7.9.1
 }
 ```
 
@@ -609,19 +846,25 @@ interface LlmRequest {
 
 | Stage | Inscriva support |
 |-------|------------------|
-| Canon lock | Canon index + context builder |
+| Canon lock | Canon index + cast index + context builder |
 | Master outline | `expand-outline` task; graph (later) |
-| Chapter outlines | Chapter panel + `expand-outline` |
-| Draft | `draft-scene`, editor, diff apply |
-| Revision passes | Pass modes + `review-*` tasks + notes |
+| Chapter outlines | Chapter workspace outline pane + `expand-outline` |
+| Draft | `draft-scene`, editor, diff apply, scene navigator |
+| On-course check | Deterministic alignment + opt-in `review-chapter-goals` |
+| Outline sync after draft | Opt-in `refresh-outline-from-draft` |
+| Character tracking | Cast index + character sheet + `summarise-character-arc` |
+| Revision passes | Pass modes + `review-*` tasks + notes + recommendations |
 | Assembly | Pandoc hook (later) |
 
 | External session type (workflow doc) | Inscriva task |
 |--------------------------------------|--------------|
 | Expand outline | `expand-outline` |
 | Draft prose | `draft-scene` |
+| Check chapter vs outline | Deterministic alignment + `review-chapter-goals` (opt-in) |
+| Update outline from draft | `refresh-outline-from-draft` (opt-in) |
 | Fix continuity | `review-continuity` + `fix-paragraph` |
 | Voice pass | `review-voice` |
+| Character arc review | `summarise-character-arc` (opt-in) |
 | Brainstorm only | `brainstorm` (no draft write without confirm) |
 
 ---

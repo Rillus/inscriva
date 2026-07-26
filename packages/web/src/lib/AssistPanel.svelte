@@ -28,6 +28,10 @@
     relevantCanon?: string;
     onclose: () => void;
     onapply?: (text: string) => void;
+    /** Called after a successful review-chapter-goals run (for save / status). */
+    onChapterReviewComplete?: (output: string) => void | Promise<void>;
+    /** Apply Assist output to the paired chapter outline (not the current editor file). */
+    expandOutlineMode?: boolean;
   }
 
   let {
@@ -41,12 +45,21 @@
     relevantCanon,
     onclose,
     onapply,
+    onChapterReviewComplete,
+    expandOutlineMode = false,
   }: Props = $props();
+
+  const isChapterReview = $derived(taskId === "review-chapter-goals");
+  const isExpandOutline = $derived(
+    expandOutlineMode || taskId === "expand-outline",
+  );
 
   const TASKS: { id: LlmTaskId; label: string }[] = [
     { id: "draft-scene", label: "Draft scene" },
     { id: "fix-paragraph", label: "Fix paragraph" },
     { id: "review-structure", label: "Review structure" },
+    { id: "expand-outline", label: "Expand outline (from book outline)" },
+    { id: "review-chapter-goals", label: "Review chapter goals" },
     { id: "review-voice", label: "Review voice" },
     { id: "review-continuity", label: "Review continuity" },
     { id: "explain-canon", label: "Explain canon" },
@@ -112,6 +125,8 @@
       if (streamed) {
         error = streamed;
         output = "";
+      } else if (taskId === "review-chapter-goals" && output.trim()) {
+        await onChapterReviewComplete?.(output);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -240,6 +255,26 @@
       {:else}
         <pre>{output}</pre>
       {/if}
+      {#if isExpandOutline && output.trim() && !running}
+        <div class="apply-row">
+          <button type="button" class="primary" onclick={() => onapply?.(output)}>
+            Apply to chapter outline
+          </button>
+          <button type="button" onclick={clearOutput}>Discard</button>
+        </div>
+        <p class="hint">
+          Writes to <strong>01 Outlines/Chapter Outlines/</strong> for this chapter (creates
+          the file if missing). Book and chapter outline formats are documented in the bar
+          above the editor.
+        </p>
+      {/if}
+      {#if isChapterReview}
+        <p class="hint review-hint">
+          This review is saved under <strong>03 Revision/Alignment/</strong> when the run
+          finishes. Outline status is separate — see the chapter outline
+          <strong>## Status</strong> section.
+        </p>
+      {/if}
     </section>
   {/if}
 </aside>
@@ -347,5 +382,15 @@
 
   .streaming {
     opacity: 0.85;
+  }
+
+  .review-hint {
+    margin-top: 0.5rem;
+  }
+
+  .apply-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
   }
 </style>

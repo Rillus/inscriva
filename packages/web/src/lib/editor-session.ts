@@ -51,7 +51,10 @@ export function saveBookEditorSession(
   const existing = sessions[bookPath];
   sessions[bookPath] = {
     activePath: partial.activePath,
-    files: { ...(existing?.files ?? {}), ...(partial.files ?? {}) },
+    files:
+      partial.files !== undefined
+        ? partial.files
+        : { ...(existing?.files ?? {}) },
   };
   writeAllSessions(sessions);
 }
@@ -95,6 +98,29 @@ export function renameFileInSession(
     activePath: session.activePath === from ? to : session.activePath,
     files,
   });
+}
+
+export function deleteFileInSession(bookPath: string, filePath: string): void {
+  const session = loadBookEditorSession(bookPath);
+  if (!session) return;
+
+  const files = { ...session.files };
+  delete files[filePath];
+
+  let activePath = session.activePath;
+  if (activePath === filePath) {
+    const remaining = Object.keys(files);
+    activePath = remaining[0] ?? "";
+  }
+
+  if (!activePath && remaining.length === 0) {
+    const sessions = readAllSessions();
+    delete sessions[bookPath];
+    writeAllSessions(sessions);
+    return;
+  }
+
+  saveBookEditorSession(bookPath, { activePath, files });
 }
 
 export function clampCaret(

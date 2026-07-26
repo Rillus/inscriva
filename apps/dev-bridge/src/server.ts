@@ -22,6 +22,7 @@ import {
   startGithubOAuth,
 } from "./github-oauth.js";
 import { loadBookFilesMap } from "./book-files-map.js";
+import { deleteBookFile } from "./delete-book-file.js";
 import { renameBookFile } from "./rename-book-file.js";
 import {
   formatSseChunk,
@@ -187,6 +188,14 @@ app.post<{ Body: { from: string; to: string } }>("/book/file/rename", async (req
   const { from, to } = req.body;
   await renameBookFile(bookRoot!, from, to, safePath);
   broadcast({ path: to, kind: "modified" });
+  return { ok: true };
+});
+
+app.post<{ Body: { path: string } }>("/book/file/delete", async (req) => {
+  requireBook();
+  const { path: filePath } = req.body;
+  await deleteBookFile(bookRoot!, filePath, safePath);
+  broadcast({ path: filePath, kind: "deleted" });
   return { ok: true };
 });
 
@@ -446,7 +455,28 @@ async function createBookLayout(root: string, title: string): Promise<void> {
 
   await fs.writeFile(
     path.join(root, "01 Outlines", "Master Outline.md"),
-    `# Master Outline\n`,
+    `# Master Outline
+
+_Inscriva reads one ## ChNN — Title block per chapter (see Show book-outline format in the app)._
+
+## Ch01 — Working title
+**Story question:** …
+**Turn:** …
+**Word target:** 2400
+
+## Scenes
+- First beat
+- Second beat
+
+## Must include
+- …
+
+## NOT
+- …
+
+## Continuity
+- …
+`,
     "utf-8",
   );
 }

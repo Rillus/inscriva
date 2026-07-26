@@ -151,6 +151,10 @@ export function createTauriBridge(): InscrivaBridge {
       await invoke("rename_file", { from, to });
     },
 
+    async deleteFile(path: string) {
+      await invoke("delete_file", { path });
+    },
+
     watchBook(callback) {
       watchers.add(callback);
       void ensureFileWatchListeners(watchers);

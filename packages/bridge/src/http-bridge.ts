@@ -148,6 +148,13 @@ export function createHttpBridge(baseUrl: string): InscrivaBridge {
       });
     },
 
+    async deleteFile(path: string) {
+      await api("/book/file/delete", {
+        method: "POST",
+        body: JSON.stringify({ path }),
+      });
+    },
+
     watchBook(callback) {
       const wsUrl = url.replace(/^http/, "ws") + "/watch";
       const ws = new WebSocket(wsUrl);

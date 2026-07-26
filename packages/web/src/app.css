@@ -65,11 +65,18 @@
   --bg-elevated: var(--surface-paper);
   --bg-muted: #d8cfc2;
   --surface-input: #ffffff;
-  --text: #1a1510;
-  --text-muted: #5c5348;
+  --surface-tab-active: #ffffff;
+
+  /* Paper ink — not overridden by .sidebar (use on cream popovers/menus) */
+  --ink-on-paper: #1a1510;
+  --ink-on-paper-muted: #5c5348;
+  --border-on-paper: #c4b5a3;
+
+  --text: var(--ink-on-paper);
+  --text-muted: var(--ink-on-paper-muted);
   --accent: #6b3d26;
   --accent-soft: #f0e4d4;
-  --border: #c4b5a3;
+  --border: var(--border-on-paper);
   --shadow-panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.45),
     inset 0 -2px 6px rgba(62, 44, 30, 0.08);
   --shadow-leather-deboss: inset 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.06);
@@ -81,9 +88,17 @@
   --font-prose: "Literata", Georgia, serif;
   --font-display: "Cinzel", "Palatino Linotype", Palatino, serif;
 
-  /* Leather rail: override ink for contrast (inherited by tree + nested UI) */
+  /* Leather rail: override ink for contrast (set color on .sidebar too) */
   --text-on-leather: #f4ebe3;
   --text-on-leather-muted: #c9b8a8;
+  --text-on-leather-subtle: #b8a898;
+  --text-on-leather-chip: #2a1810;
+
+  /* Mahogany top bar */
+  --text-on-topbar: #ebe4dc;
+  --text-on-topbar-muted: #d4ccc4;
+  --text-on-topbar-subtle: #c4bdb5;
+
   --accent-on-leather: #e8c896;
   --accent-soft-on-leather: rgba(232, 200, 150, 0.14);
   --border-on-leather: rgba(20, 12, 8, 0.55);
@@ -120,6 +135,27 @@ body::before {
 
 #app {
   height: 100%;
+}
+
+/* Cream surfaces inside the leather sidebar inherit light --text otherwise */
+.surface-paper-ink {
+  color: var(--ink-on-paper);
+  --text: var(--ink-on-paper);
+  --text-muted: var(--ink-on-paper-muted);
+  --border: var(--border-on-paper);
+  --accent: #6b3d26;
+  --accent-soft: #f0e4d4;
+}
+
+.surface-paper-ink :is(input, textarea, select) {
+  color: var(--ink-on-paper);
+  background-color: var(--surface-input);
+  border-color: var(--border-on-paper);
+}
+
+.surface-paper-ink :is(input, textarea)::placeholder {
+  color: var(--ink-on-paper-muted);
+  opacity: 1;
 }
 
 button {

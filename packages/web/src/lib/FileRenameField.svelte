@@ -10,17 +10,34 @@
     alwaysEditing?: boolean;
   }
 
-  let { path, onSave, onCancel, class: className = "", alwaysEditing = false }: Props = $props();
+  let {
+    path,
+    onSave,
+    onCancel,
+    class: className = "",
+    alwaysEditing = false,
+  }: Props = $props();
 
   let editing = $state(false);
   let draft = $state("");
   let error = $state<string | null>(null);
   let inputEl = $state<HTMLInputElement | null>(null);
+  /** Avoid committing on blur fired during mount/focus hand-off. */
+  let blurCommitReady = $state(false);
 
   $effect(() => {
     draft = fileBaseName(path);
-    error = null;
-    editing = alwaysEditing;
+    if (!editing) error = null;
+  });
+
+  $effect(() => {
+    if (!alwaysEditing) return;
+    editing = true;
+    blurCommitReady = false;
+    const id = requestAnimationFrame(() => {
+      blurCommitReady = true;
+    });
+    return () => cancelAnimationFrame(id);
   });
 
   $effect(() => {
@@ -30,10 +47,18 @@
     }
   });
 
+  function armBlurCommit() {
+    blurCommitReady = false;
+    requestAnimationFrame(() => {
+      blurCommitReady = true;
+    });
+  }
+
   function startEditing() {
     draft = fileBaseName(path);
     error = null;
     editing = true;
+    armBlurCommit();
   }
 
   function commit() {
@@ -43,8 +68,13 @@
       return;
     }
     error = null;
-    editing = alwaysEditing;
+    if (!alwaysEditing) editing = false;
     onSave(draft.trim());
+  }
+
+  function handleBlur() {
+    if (!blurCommitReady) return;
+    commit();
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -55,7 +85,7 @@
       e.preventDefault();
       draft = fileBaseName(path);
       error = null;
-      editing = alwaysEditing;
+      if (!alwaysEditing) editing = false;
       onCancel();
     }
   }
@@ -72,7 +102,7 @@
       aria-label="File name"
       aria-invalid={error ? "true" : undefined}
       onkeydown={handleKeydown}
-      onblur={commit}
+      onblur={handleBlur}
     />
     {#if error}
       <span class="rename-error" role="alert">{error}</span>
@@ -99,35 +129,52 @@
   .rename-display {
     border: none;
     background: transparent;
-    padding: 0;
+    padding: 0.15rem 0.25rem;
+    margin: -0.15rem -0.25rem;
     font: inherit;
     color: inherit;
     text-align: left;
     cursor: text;
-    text-decoration: underline dotted transparent;
+    border-radius: 4px;
+    text-decoration: underline;
+    text-decoration-color: rgba(232, 200, 150, 0.55);
+    text-underline-offset: 3px;
   }
 
-  .rename-display:hover {
-    text-decoration-color: currentColor;
+  .rename-display:hover,
+  .rename-display:focus-visible {
+    background: rgba(232, 200, 150, 0.18);
+    text-decoration-color: #e8c896;
+    outline: 2px solid rgba(232, 200, 150, 0.45);
+    outline-offset: 2px;
   }
 
   .rename-input {
     width: 100%;
     min-width: 0;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border);
+    padding: 0.35rem 0.5rem;
+    border: 2px solid var(--rename-border, var(--border-on-paper, var(--border)));
     border-radius: 4px;
     font: inherit;
-    background: var(--bg-elevated);
-    color: var(--text);
+    background: var(--rename-bg, var(--bg-elevated));
+    color: var(--rename-fg, var(--ink-on-paper, var(--text)));
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  .rename-input:focus {
+    outline: none;
+    border-color: var(--rename-focus, var(--accent, #8b6914));
+    box-shadow: 0 0 0 2px var(--rename-focus-ring, rgba(139, 105, 20, 0.25));
   }
 
   .rename-input.invalid {
-    border-color: #b45309;
+    border-color: #c2410c;
+    box-shadow: 0 0 0 2px rgba(194, 65, 12, 0.2);
   }
 
   .rename-error {
     font-size: 0.72rem;
-    color: #b45309;
+    color: #ea580c;
+    font-weight: 500;
   }
 </style>

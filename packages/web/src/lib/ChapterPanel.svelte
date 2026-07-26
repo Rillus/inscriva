@@ -14,10 +14,21 @@
   <header>
     <p class="eyebrow">Chapter focus</p>
     <h2>{chapterTitle}</h2>
+    {#if focus.status}
+      <p class="status" title="From outline ## Status or front matter status:">
+        <span class="status-label">Status</span>
+        <strong>{focus.status}</strong>
+      </p>
+    {:else}
+      <p class="status missing" title="Add ## Status or status: in the outline to track workflow">
+        <span class="status-label">Status</span>
+        <span>Not set</span>
+      </p>
+    {/if}
   </header>
 
-  {#if showBanner && focus.turn}
-    <p class="banner">{focus.turn}</p>
+  {#if showBanner && (focus.turnByChapterEnd ?? focus.turn)}
+    <p class="banner">{focus.turnByChapterEnd ?? focus.turn}</p>
   {/if}
 
   {#if focus.storyQuestion}
@@ -31,8 +42,8 @@
     <section>
       <h3>Scenes</h3>
       <ol>
-        {#each focus.scenes as scene}
-          <li>{scene}</li>
+        {#each focus.scenes as scene (scene.label)}
+          <li>{scene.label}</li>
         {/each}
       </ol>
     </section>
@@ -95,6 +106,26 @@
     margin: 0.15rem 0 0;
     font-size: 1.1rem;
     font-weight: 600;
+  }
+
+  .status {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.8rem;
+  }
+
+  .status-label {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  .status.missing span:last-child {
+    color: var(--text-muted);
+    font-style: italic;
   }
 
   .eyebrow {

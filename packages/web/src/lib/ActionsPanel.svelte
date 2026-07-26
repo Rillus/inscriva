@@ -182,12 +182,36 @@
     errorEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
   });
 
+  let __fireCount = 0;
   $effect(() => {
-    if (!advancedOpen || !bridge || !bookId || !anchor || !writingContext) {
+    __fireCount++;
+    const advOpen = advancedOpen;
+    const hasBridge = Boolean(bridge);
+    const hasBookId = Boolean(bookId);
+    const hasAnchor = Boolean(anchor);
+    const hasWriting = Boolean(writingContext);
+    const key = previewKey;
+    console.log(
+      "preview-effect#" + __fireCount,
+      "adv=" + advOpen,
+      "bridge=" + hasBridge,
+      "book=" + hasBookId,
+      "anchor=" + hasAnchor,
+      "writing=" + hasWriting,
+      "key=" + key,
+      "editorLen=" + editorContent.length,
+      "caret=" + caretFrom + ":" + caretTo,
+    );
+    if (!advOpen || !hasBridge || !hasBookId || !hasAnchor || !hasWriting) {
       return;
     }
-    previewKey;
     void loadContextPreview();
+  });
+
+  let __anchorFireCount = 0;
+  $effect(() => {
+    __anchorFireCount++;
+    console.log("anchorKey-effect#" + __anchorFireCount, "key=" + anchorKey);
   });
 
   const hasSelection = $derived(Boolean(selection?.text));
@@ -862,8 +886,13 @@
   }
 
   .context-sections li.excluded {
-    opacity: 0.65;
     border-style: dashed;
+  }
+
+  .context-sections li.excluded .section-label,
+  .context-sections li.excluded .section-path,
+  .context-sections li.excluded .section-chars {
+    color: var(--text-muted);
   }
 
   .section-label {

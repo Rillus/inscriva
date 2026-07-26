@@ -5,6 +5,7 @@ import {
   DecorationSet,
   EditorView,
   ViewPlugin,
+  WidgetType,
   type ViewUpdate,
 } from "@codemirror/view";
 import { MarkdownDecorationQueue } from "./markdown-decoration-queue.js";
@@ -198,6 +199,49 @@ function addBlockquote(
   queue.mark(node.from, node.to, "cm-md-blockquote");
 }
 
+class ListBulletWidget extends WidgetType {
+  constructor(readonly label: string) {
+    super();
+  }
+
+  eq(other: ListBulletWidget) {
+    return other.label === this.label;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-md-list-bullet";
+    span.textContent = this.label;
+    span.setAttribute("aria-hidden", "true");
+    return span;
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
+function listMarkHideEnd(
+  doc: EditorState["doc"],
+  markTo: number,
+  itemTo: number,
+): number {
+  let pos = markTo;
+  while (pos < itemTo) {
+    const ch = doc.sliceString(pos, pos + 1);
+    if (ch !== " " && ch !== "\t") break;
+    pos++;
+  }
+  return pos;
+}
+
+function listBulletLabel(markText: string): string {
+  const trimmed = markText.trim();
+  if (/^\d+\.$/.test(trimmed)) return trimmed;
+  if (/^\d+\)$/.test(trimmed)) return trimmed;
+  return "•";
+}
+
 function addListItem(
   queue: MarkdownDecorationQueue,
   state: EditorState,
@@ -207,11 +251,22 @@ function addListItem(
   const syn = syntaxNodeAtSpan(state, node.from, node.to, node.name);
   if (!syn) return;
 
+  const listMark = syn.getChild("ListMark");
+  if (!listMark) return;
+
   const active = cursorTouchesRange(ranges, node);
+  const line = state.doc.lineAt(listMark.from);
+  queue.line(line.from, "cm-md-list-item");
+
   if (!active) {
-    for (const mark of syn.getChildren("ListMark")) {
-      queue.hide(mark.from, mark.to);
-    }
+    const hideTo = listMarkHideEnd(state.doc, listMark.to, node.to);
+    queue.hide(listMark.from, hideTo);
+    const markText = state.doc.sliceString(listMark.from, listMark.to);
+    queue.widget(
+      hideTo,
+      new ListBulletWidget(listBulletLabel(markText)),
+      "cm-md-list-bullet-wrap",
+    );
   }
 }
 

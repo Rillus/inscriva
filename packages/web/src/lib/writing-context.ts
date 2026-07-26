@@ -22,6 +22,10 @@ export function resolveCurrentScene(
   return partial ?? heading;
 }
 
+function sceneLabels(focus: ChapterFocus): string[] {
+  return focus.scenes.map((s) => s.label);
+}
+
 export function formatChapterFocusForContext(
   focus: ChapterFocus,
   currentScene?: string,
@@ -36,8 +40,9 @@ export function formatChapterFocusForContext(
   if (focus.scenes.length) {
     lines.push("**Scenes in this chapter:**");
     for (const scene of focus.scenes) {
-      const marker = scene === currentScene ? " ← current" : "";
-      lines.push(`- ${scene}${marker}`);
+      const label = scene.label;
+      const marker = label === currentScene ? " ← current" : "";
+      lines.push(`- ${label}${marker}`);
     }
   }
   if (focus.mustInclude.length) {
@@ -90,7 +95,7 @@ export function assembleWritingContext(
   const draftExcerpt = draftExcerptAtOffset(editorContent, offset);
   const focus = parseChapterFocus(outlineContent);
   const heading = sceneHeadingBeforeOffset(editorContent, offset);
-  const currentScene = resolveCurrentScene(heading, focus.scenes);
+  const currentScene = resolveCurrentScene(heading, sceneLabels(focus));
   const chapterFocus = formatChapterFocusForContext(focus, currentScene);
 
   const canonHaystack = [draftExcerpt, workingText].filter(Boolean).join("\n\n");

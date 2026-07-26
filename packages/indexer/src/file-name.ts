@@ -1,7 +1,8 @@
 const MAX_BASE_LENGTH = 180;
 
 /** Letters, digits, and common punctuation used in chapter filenames. */
-const BASE_NAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9._\- '()]*[a-zA-Z0-9.)])?$/;
+const BASE_NAME_RE =
+  /^[a-zA-Z0-9]([a-zA-Z0-9._\- '()—–]*[a-zA-Z0-9.)])?$/;
 
 export function fileBaseName(path: string): string {
   const name = path.split(/[/\\]/).pop() ?? path;

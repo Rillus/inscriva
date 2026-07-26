@@ -13,6 +13,7 @@ import {
 describe("validateFileBaseName", () => {
   it("accepts typical chapter names", () => {
     expect(validateFileBaseName("Ch01 - The Eighth A")).toBeNull();
+    expect(validateFileBaseName("Ch01 — The Eighth A")).toBeNull();
     expect(validateFileBaseName("Mara")).toBeNull();
     expect(validateFileBaseName("Master Outline")).toBeNull();
   });

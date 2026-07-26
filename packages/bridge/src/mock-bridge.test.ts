@@ -58,6 +58,20 @@ describe("createMockBridge", () => {
     expect(sidecar.file).toBe("renamed.md");
   });
 
+  it("deletes a file and its sidecar", async () => {
+    const book = sampleBook();
+    book.files.set(
+      ".inscriva/anchors/chapter.md.json",
+      JSON.stringify({ file: "chapter.md", version: 1, anchors: [] }),
+    );
+    const bridge = createMockBridge(book);
+
+    await bridge.deleteFile("chapter.md");
+
+    expect(book.files.has("chapter.md")).toBe(false);
+    expect(book.files.has(".inscriva/anchors/chapter.md.json")).toBe(false);
+  });
+
   it("throws when reading a missing file", async () => {
     const bridge = createMockBridge(sampleBook());
     await expect(bridge.readFile("missing.md")).rejects.toThrow("File not found");

@@ -8,19 +8,34 @@
     buildMovedPath,
     buildNewFilePath,
     buildRenamedPath,
+    countWords,
     defaultNewFileDirectory,
     buildCanonIndex,
     buildSidecar,
+    alignmentSummaryFromReport,
+    evaluateRecommendations,
+    applyExpandedChapterOutline,
+    defaultChapterOutlinePath,
+    findMasterOutlinePath,
     findUnlinkedPlants,
+    type MasterChapterEntry,
+    isGoalChecked,
     NOTES_PATH,
+    parseWordTarget,
     parseNotesJsonl,
     parseParagraphs,
     pairChapters,
     reconcileAnchors,
     serialiseNotes,
+    toggleGoalCheck,
+    type AlignmentReport,
+    type BookIndex,
     type CanonIndex,
+    type ChapterMapOverrides,
     type ChapterPair,
+    type GoalChecksByChapter,
     type LineNote,
+    type Recommendation,
     type RevisionPassId,
     type TreeNode,
   } from "@inscriva/indexer";
@@ -35,10 +50,15 @@
     | "mode_revise"
     | "mode_read";
   import type { BridgeCapabilities } from "@inscriva/bridge";
+  import AlignmentPanel from "./lib/AlignmentPanel.svelte";
   import ChapterPanel from "./lib/ChapterPanel.svelte";
+  import ChapterRail from "./lib/ChapterRail.svelte";
   import ActionsPanel from "./lib/ActionsPanel.svelte";
   import Editor from "./lib/Editor.svelte";
   import FileTree from "./lib/FileTree.svelte";
+  import GoalChecklist from "./lib/GoalChecklist.svelte";
+  import SceneNavigator from "./lib/SceneNavigator.svelte";
+  import WritingSessionStrip from "./lib/WritingSessionStrip.svelte";
   import FileRenameField from "./lib/FileRenameField.svelte";
   import NotesGutter from "./lib/NotesGutter.svelte";
   import AssistPanel from "./lib/AssistPanel.svelte";
@@ -46,7 +66,28 @@
   import SettingsModal from "./lib/SettingsModal.svelte";
   import WelcomeScreen from "./lib/WelcomeScreen.svelte";
   import AppLoadOverlay from "./lib/AppLoadOverlay.svelte";
+  import {
+    appendClosedWritingSession,
+    buildAlignmentReport,
+    loadAlignmentReport,
+    loadChapterMap,
+    loadGoalChecks,
+    loadPairsWithContents,
+    persistAiChapterReview,
+    persistAlignmentReport,
+    refreshBookIndex,
+    saveGoalChecks,
+  } from "./lib/book-workspace.js";
+  import { formatExpandOutlineContext } from "./lib/expand-outline-context.js";
+  import MasterOutlineBar from "./lib/MasterOutlineBar.svelte";
+  import {
+    loadNavigationView,
+    saveNavigationView,
+    type NavigationView,
+  } from "./lib/navigation-preference.js";
   import { parseChapterFocus } from "./lib/outline-parser.js";
+  import { confirmDeleteFile } from "./lib/confirm-delete-file.js";
+  import { createWritingSessionTracker } from "./lib/writing-session-tracker.js";
   import {
     draftExcerptForAssist,
     type EditorSelection,
@@ -65,6 +106,7 @@
     clampCaret,
     loadBookEditorSession,
     loadLastBookPath,
+    deleteFileInSession,
     renameFileInSession,
     saveFileViewState,
     saveLastBookPath,
@@ -88,6 +130,7 @@
   } from "./lib/mock-book.js";
 
   type EditorMode = "draft" | "revise" | "read";
+  type WorkspaceTab = "draft" | "outline" | "alignment";
 
   let bridge = $state<InscrivaBridge | null>(null);
   let capabilities = $state<BridgeCapabilities>({
@@ -139,6 +182,20 @@
   let workspaceReady = $state(false);
   let awaitingPresentation = $state(false);
   let restoreFallbackTimer: ReturnType<typeof setTimeout> | undefined;
+  let navView = $state<NavigationView>(loadNavigationView());
+  let workspaceTab = $state<WorkspaceTab>("draft");
+  let activeChapterKey = $state<string | undefined>();
+  let bookIndex = $state<BookIndex | null>(null);
+  let chapterMap = $state<ChapterMapOverrides>({});
+  let goalChecks = $state<GoalChecksByChapter>({});
+  let alignmentReport = $state<AlignmentReport | null>(null);
+  let alignmentBusy = $state(false);
+  let dismissedRecIds = $state<string[]>([]);
+  let expandOutlineEntry = $state<MasterChapterEntry | null>(null);
+  let outlineContentsCache = $state<Record<string, string>>({});
+  let draftContentsCache = $state<Record<string, string>>({});
+  const sessionTracker = createWritingSessionTracker();
+  let sessionTickTimer: ReturnType<typeof setInterval> | undefined;
 
   function fileDisplayName(path: string): string {
     return path.split("/").pop()?.replace(/\.md$/, "") ?? path;
@@ -181,12 +238,34 @@
 
   const focus = $derived(parseChapterFocus(outlineContent));
   const activePair = $derived(
-    chapterPairs.find((p) => p.draft === activePath || p.outline === activePath),
+    chapterPairs.find(
+      (p) =>
+        p.key === activeChapterKey ||
+        p.draft === activePath ||
+        p.outline === activePath,
+    ),
   );
   const chapterTitle = $derived(
     activePair?.key
-      ? `${activePair.key}${focus.storyQuestion ? "" : ""}`
+      ? bookIndex?.chapters.find((c) => c.key === activePair.key)?.title ??
+          activePair.title ??
+          activePair.key
       : activePath?.split("/").pop()?.replace(/\.md$/, "") ?? "Chapter",
+  );
+  const wordTarget = $derived(parseWordTarget(focus.wordTarget));
+  const targetLabel = $derived(
+    wordTarget
+      ? wordTarget.min === wordTarget.max
+        ? String(wordTarget.max)
+        : `${wordTarget.min}–${wordTarget.max}`
+      : undefined,
+  );
+  const draftWordCount = $derived(
+    activePair?.draft && activePath === activePair.draft
+      ? countWords(editorContent)
+      : activePair?.draft
+        ? countWords(draftContentsCache[activePair.draft] ?? "")
+        : 0,
   );
   const paragraphNotes = $derived(
     activeAnchorId
@@ -195,12 +274,229 @@
   );
   const showNotesGutter = $derived(mode === "revise" && activePair?.draft === activePath);
   const unlinkedPlants = $derived(
-    showNotesGutter ? findUnlinkedPlants(editorContent, outlineContent) : [],
+    showNotesGutter || workspaceTab === "alignment"
+      ? findUnlinkedPlants(editorContent, outlineContent)
+      : [],
   );
+
+  const recommendations = $derived.by((): Recommendation[] => {
+    if (!activePair?.key) return [];
+    const meta = bookIndex?.chapters.find((c) => c.key === activePair.key);
+    const summary =
+      alignmentReport?.chapterKey === activePair.key
+        ? alignmentSummaryFromReport(alignmentReport)
+        : meta?.alignmentSummary;
+    return evaluateRecommendations({
+      chapterKey: activePair.key,
+      draftWords: draftWordCount,
+      wordTarget,
+      unlinkedPlants,
+      alignmentSummary: summary,
+      outlineStatus: focus.status,
+    }).filter((r) => !dismissedRecIds.includes(`${activePair.key}:${r.id}`));
+  });
+
+  const goalCheckState = $derived.by(() => {
+    const key = activePair?.key;
+    if (!key || !alignmentReport) return {};
+    const out: Record<string, boolean> = {};
+    for (const m of alignmentReport.mustInclude) {
+      out[m.item] = isGoalChecked(goalChecks, key, m.item, m.status === "hit");
+    }
+    return out;
+  });
+
+  function setNavView(view: NavigationView) {
+    navView = view;
+    saveNavigationView(view);
+  }
+
+  async function endWritingSession() {
+    const open = sessionTracker.state;
+    if (!bridge || isDemoBook || !open) return;
+    sessionTracker.tick();
+    const ended = sessionTracker.end();
+    if (!ended) return;
+    await appendClosedWritingSession(
+      bridge,
+      {
+        chapterKey: ended.chapterKey,
+        draftPath: ended.draftPath,
+        wordsAtStart: ended.wordsAtStart,
+        targetWords: ended.targetWords,
+        startedAt: new Date(ended.startedAt).toISOString(),
+      },
+      {
+        wordsAtEnd: ended.wordsAtEnd,
+        activeSeconds: ended.activeSeconds,
+      },
+    );
+  }
+
+  function startWritingSession() {
+    const pair = activePair;
+    if (!pair?.draft || !pair.key || activePath !== pair.draft) return;
+    sessionTracker.start({
+      chapterKey: pair.key,
+      draftPath: pair.draft,
+      wordsAtStart: countWords(editorContent),
+      targetWords: wordTarget?.max,
+    });
+  }
+
+  async function rebuildWorkspaceIndex(
+    alignmentByChapter?: Record<string, AlignmentReport>,
+  ) {
+    if (!bridge || isDemoBook) return;
+    bookIndex = await refreshBookIndex(bridge, {
+      pairs: chapterPairs,
+      draftContents: draftContentsCache,
+      outlineContents: outlineContentsCache,
+      alignmentByChapter,
+    });
+  }
+
+  async function refreshChapterListing() {
+    if (!bridge) return;
+    filePaths = await bridge.listFiles();
+    fileTree = buildBookTree(filePaths);
+    if (isDemoBook) {
+      chapterPairs = pairChapters(filePaths);
+      return;
+    }
+    chapterMap = await loadChapterMap(bridge);
+    const loaded = await loadPairsWithContents(bridge, filePaths, chapterMap);
+    chapterPairs = loaded.pairs;
+    outlineContentsCache = loaded.outlineContents;
+    draftContentsCache = loaded.draftContents;
+    await rebuildWorkspaceIndex();
+  }
+
+  async function selectChapter(key: string) {
+    await endWritingSession();
+    activeChapterKey = key;
+    workspaceTab = "draft";
+    const pair = chapterPairs.find((p) => p.key === key);
+    if (pair?.draft) {
+      await openFile(pair.draft);
+    } else if (pair?.outline) {
+      await openFile(pair.outline);
+    }
+    if (bridge && !isDemoBook) {
+      alignmentReport = await loadAlignmentReport(bridge, key);
+    }
+    startWritingSession();
+  }
+
+  async function setWorkspaceTab(tab: WorkspaceTab) {
+    workspaceTab = tab;
+    const pair = activePair;
+    if (!pair) return;
+    if (tab === "draft" && pair.draft) await openFile(pair.draft);
+    else if (tab === "outline" && pair.outline) await openFile(pair.outline);
+  }
+
+  async function runAlignmentRefresh() {
+    if (!bridge || !activePair?.key || !activePair.outline || !activePair.draft) {
+      return;
+    }
+    alignmentBusy = true;
+    try {
+      const outlineMd =
+        outlineContentsCache[activePair.outline] ??
+        (await bridge.readFile(activePair.outline));
+      const draftMd =
+        activePath === activePair.draft
+          ? editorContent
+          : (draftContentsCache[activePair.draft] ??
+            (await bridge.readFile(activePair.draft)));
+      const report = buildAlignmentReport({
+        chapterKey: activePair.key,
+        outlineMarkdown: outlineMd,
+        draftMarkdown: draftMd,
+      });
+      alignmentReport = report;
+      if (!isDemoBook) {
+        await persistAlignmentReport(bridge, report);
+        draftContentsCache[activePair.draft] = draftMd;
+        await rebuildWorkspaceIndex({ [activePair.key]: report });
+      }
+    } finally {
+      alignmentBusy = false;
+    }
+  }
+
+  function handleGoalToggle(item: string, checked: boolean) {
+    const key = activePair?.key;
+    if (!key) return;
+    goalChecks = toggleGoalCheck(goalChecks, key, item, checked);
+    if (bridge && !isDemoBook) void saveGoalChecks(bridge, goalChecks);
+  }
+
+  function dismissRecommendation(id: string) {
+    const key = activePair?.key;
+    if (!key) return;
+    dismissedRecIds = [...dismissedRecIds, `${key}:${id}`];
+  }
+
+  function jumpToScene(label: string) {
+    const idx = editorContent.indexOf(`## ${label}`);
+    if (idx >= 0) {
+      editorCaret = { from: idx, to: idx };
+      restoreViewState = {
+        caret: editorCaret,
+        scrollTop: latestViewState?.scrollTop ?? 0,
+      };
+    }
+  }
 
   function handleRevisionAssist(taskId: LlmTaskId) {
     assistTaskId = taskId;
     showAssist = true;
+  }
+
+  function handleRecommendationAssist(taskId: LlmTaskId) {
+    assistTaskId = taskId;
+    showAssist = true;
+  }
+
+  async function handleChapterReviewComplete(output: string) {
+    const pair = activePair;
+    if (!bridge || !pair?.key || isDemoBook) return;
+    try {
+      const { exportPath, parsedStatus } = await persistAiChapterReview(bridge, {
+        chapterKey: pair.key,
+        output,
+        outlinePath: pair.outline,
+      });
+      gitMessage = `Saved AI review to ${exportPath}`;
+
+      if (parsedStatus && pair.outline) {
+        const update = confirm(
+          `Review reports status “${parsedStatus}”. Update the outline ## Status section to match?`,
+        );
+        if (update) {
+          await persistAiChapterReview(bridge, {
+            chapterKey: pair.key,
+            output,
+            outlinePath: pair.outline,
+            updateOutlineStatus: true,
+          });
+          const refreshed = await bridge.readFile(pair.outline);
+          outlineContentsCache = {
+            ...outlineContentsCache,
+            [pair.outline]: refreshed,
+          };
+          if (activePath === pair.outline) {
+            outlineContent = refreshed;
+          }
+          gitMessage = `Saved review and set outline status to “${parsedStatus}”`;
+          await rebuildWorkspaceIndex();
+        }
+      }
+    } catch (e) {
+      gitMessage = e instanceof Error ? e.message : "Could not save AI review";
+    }
   }
 
   function handleRevisionChecked(passId: RevisionPassId, checked: boolean) {
@@ -208,6 +504,47 @@
   }
   const selectionText = $derived(editorSelection?.text);
   const isDemoBook = $derived(bookPath === MOCK_BOOK_PATH);
+  const masterOutlinePath = $derived(findMasterOutlinePath(filePaths));
+
+  async function openBookOutline() {
+    if (masterOutlinePath) await openFile(masterOutlinePath);
+  }
+
+  function handleExpandFromMaster(entry: MasterChapterEntry) {
+    expandOutlineEntry = entry;
+    assistTaskId = "expand-outline";
+    showAssist = true;
+  }
+
+  async function applyExpandOutlineToChapter(text: string) {
+    const entry = expandOutlineEntry;
+    if (!bridge || !entry || isDemoBook) return;
+    const pair = chapterPairs.find((p) => p.key === entry.key);
+    const outlinePath = pair?.outline ?? defaultChapterOutlinePath(entry);
+    let existing: string | undefined;
+    if (pair?.outline) {
+      try {
+        existing = await bridge.readFile(pair.outline);
+      } catch {
+        existing = outlineContentsCache[pair.outline];
+      }
+    }
+    const next = applyExpandedChapterOutline(existing, text, entry);
+    try {
+      await bridge.writeFile(outlinePath, next);
+      outlineContentsCache = { ...outlineContentsCache, [outlinePath]: next };
+      await refreshChapterListing();
+      activeChapterKey = entry.key;
+      workspaceTab = "outline";
+      await openFile(outlinePath);
+      expandOutlineEntry = null;
+      showAssist = false;
+      gitMessage = `Updated chapter outline for ${entry.key}`;
+    } catch (e) {
+      gitMessage =
+        e instanceof Error ? e.message : "Could not save chapter outline";
+    }
+  }
 
   function persistViewState(state: FileViewState) {
     latestViewState = state;
@@ -246,15 +583,35 @@
       syncEditorUrl(activePath, offsetToLine(editorContent, editorCaret.from));
     }, 400);
   }
-  const assistWritingContext = $derived(
-    assembleWritingContext({
+  const assistWritingContext = $derived.by(() => {
+    if (expandOutlineEntry) {
+      const pair = chapterPairs.find((p) => p.key === expandOutlineEntry.key);
+      const existing = pair?.outline
+        ? outlineContentsCache[pair.outline]
+        : undefined;
+      const base = assembleWritingContext({
+        editorContent,
+        outlineContent: existing ?? "",
+        canonIndex,
+        offset: editorCaret.from,
+        workingText: editorSelection?.text,
+      });
+      return {
+        chapterFocus: formatExpandOutlineContext({
+          entry: expandOutlineEntry,
+          existingChapterOutline: existing,
+        }),
+        relevantCanon: base.relevantCanon,
+      };
+    }
+    return assembleWritingContext({
       editorContent,
       outlineContent,
       canonIndex,
       offset: editorSelection?.to ?? editorCaret.to,
       workingText: editorSelection?.text,
-    }),
-  );
+    });
+  });
 
   const draftExcerpt = $derived(
     assistWritingContext.draftExcerpt ??
@@ -352,6 +709,8 @@
       window.removeEventListener("beforeunload", onBeforeUnload);
       clearTimeout(urlLineTimer);
       clearTimeout(restoreFallbackTimer);
+      clearInterval(sessionTickTimer);
+      void endWritingSession();
       flushViewStateSave();
       unbindMenu();
     };
@@ -372,6 +731,7 @@
         welcomeTab = "new";
         break;
       case "close_book":
+        void endWritingSession();
         bookPath = null;
         syncEditorUrl(null);
         break;
@@ -401,6 +761,7 @@
     filePaths = [...mock.files.keys()];
     fileTree = buildBookTree(filePaths);
     chapterPairs = pairChapters(filePaths);
+    activeChapterKey = "Ch01";
     canonIndex = buildCanonIndex(mock.files);
     activePath = MOCK_CHAPTER_PATH;
     editorContent = mock.files.get(MOCK_CHAPTER_PATH) ?? "";
@@ -425,7 +786,10 @@
     recents = await bridge.getRecents();
     if (path !== MOCK_BOOK_PATH) saveLastBookPath(path);
     setLoadState("Opening book", "Loading file list…");
-    await refreshBookListing();
+    await refreshChapterListing();
+    if (!isDemoBook && bridge) {
+      goalChecks = await loadGoalChecks(bridge);
+    }
     const session = path === MOCK_BOOK_PATH ? null : loadBookEditorSession(path);
     const firstDraft = chapterPairs.find((p) => p.draft)?.draft ?? null;
     const loc = urlEditorLocation;
@@ -440,25 +804,29 @@
     urlEditorLocation = { file: null, line: null };
     if (target) {
       setLoadState("Opening chapter", fileDisplayName(target));
+      const pair = chapterPairs.find(
+        (p) => p.draft === target || p.outline === target,
+      );
+      if (pair) activeChapterKey = pair.key;
       await openFile(target, { line });
       finishWorkspaceOpen(target);
+      startWritingSession();
     } else {
       completeWorkspaceOpen();
     }
     startAutosave();
+    startSessionClock();
     void loadBookSupplementInBackground();
   }
 
-  async function refreshBookListing() {
-    if (!bridge) return;
-    filePaths = await bridge.listFiles();
-    fileTree = buildBookTree(filePaths);
-    chapterPairs = pairChapters(filePaths);
+  async function refreshBook() {
+    await refreshChapterListing();
+    await Promise.all([rebuildCanonIndex(), loadNotes()]);
   }
 
-  async function refreshBook() {
-    await refreshBookListing();
-    await Promise.all([rebuildCanonIndex(), loadNotes()]);
+  function startSessionClock() {
+    clearInterval(sessionTickTimer);
+    sessionTickTimer = setInterval(() => sessionTracker.tick(), 1000);
   }
 
   async function loadBookSupplementInBackground() {
@@ -539,8 +907,16 @@
 
     if (outlineText !== null) {
       outlineContent = outlineText;
+      if (outlinePath) outlineContentsCache[outlinePath] = outlineText;
     } else if (path.includes("Chapter Outlines/")) {
       outlineContent = editorContent;
+      outlineContentsCache[path] = editorContent;
+    }
+
+    if (pair) {
+      activeChapterKey = pair.key;
+      if (pair.draft) draftContentsCache[pair.draft] =
+        pair.draft === path ? editorContent : draftContentsCache[pair.draft] ?? text;
     }
 
     if (pair?.draft === path) {
@@ -571,6 +947,12 @@
   async function handleEditorChange(value: string) {
     editorContent = value;
     reconcileCurrent();
+
+    const pair = activePair;
+    if (pair?.draft && pair.draft === activePath) {
+      sessionTracker.onEdit(countWords(value));
+      draftContentsCache[pair.draft] = value;
+    }
 
     if (!bridge || !activePath) return;
     clearTimeout(saveTimer);
@@ -690,6 +1072,41 @@
     await relocateFile(from, to, "Rename failed");
   }
 
+  async function handleFileDelete(filePath: string) {
+    if (!bridge || !confirmDeleteFile(filePath)) return;
+
+    cancelPendingFileSave(saveTimer);
+    saveTimer = undefined;
+
+    const wasActive = activePath === filePath;
+    const fallback = filePaths.find(
+      (p) => p !== filePath && p.endsWith(".md"),
+    );
+
+    try {
+      await bridge.deleteFile(filePath);
+      if (bookPath && bookPath !== MOCK_BOOK_PATH) {
+        deleteFileInSession(bookPath, filePath);
+      }
+      await refreshBook();
+      if (wasActive) {
+        if (fallback) {
+          await openFile(fallback);
+        } else {
+          activePath = undefined;
+          editorContent = "";
+          outlineContent = "";
+          activeChapterKey = undefined;
+          syncEditorUrl(null);
+        }
+      }
+      gitStatus = await bridge.gitStatus();
+      gitMessage = "";
+    } catch (e) {
+      gitMessage = e instanceof Error ? e.message : "Delete failed";
+    }
+  }
+
   async function handleFileMove(from: string, toDir: string) {
     let to: string;
     try {
@@ -731,6 +1148,15 @@
       ),
     );
     gitStatus = await bridge.gitStatus();
+
+    if (path.includes("01 Outlines/")) {
+      outlineContentsCache[path] = content;
+      void rebuildWorkspaceIndex();
+    } else if (path.includes("02 Drafts/")) {
+      draftContentsCache[path] = content;
+      const pair = chapterPairs.find((p) => p.draft === path);
+      if (pair) void rebuildWorkspaceIndex();
+    }
   }
 
   async function addNote(text: string) {
@@ -856,6 +1282,7 @@
           type="button"
           class="link"
           onclick={() => {
+            void endWritingSession();
             bookPath = null;
             syncEditorUrl(null);
           }}
@@ -868,13 +1295,39 @@
         <AppLoadOverlay title={loadState.title} detail={loadState.detail} />
       {/if}
       <aside class="sidebar">
-        {#if fileTree}
+        <div class="nav-switch" role="tablist" aria-label="Navigation">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={navView === "chapter"}
+            class:active={navView === "chapter"}
+            onclick={() => setNavView("chapter")}
+          >Chapters</button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={navView === "files"}
+            class:active={navView === "files"}
+            onclick={() => setNavView("files")}
+          >Files</button>
+        </div>
+        {#if navView === "chapter" && chapterPairs.length}
+          <ChapterRail
+            pairs={chapterPairs}
+            indexChapters={bookIndex?.chapters}
+            activeKey={activeChapterKey ?? activePair?.key}
+            masterOutlinePath={masterOutlinePath}
+            onOpenBookOutline={openBookOutline}
+            onSelect={selectChapter}
+          />
+        {:else if fileTree}
           <FileTree
             tree={fileTree}
             {activePath}
             defaultCreateDir={defaultCreateDir}
             onSelect={openFile}
             onRename={handleFileRename}
+            onDelete={handleFileDelete}
             onCreate={handleCreateFile}
             onMove={handleFileMove}
           />
@@ -882,6 +1335,44 @@
       </aside>
 
       <main class="editor-pane" class:preparing={!workspaceReady}>
+        {#if activePair && navView === "chapter"}
+          <nav class="workspace-tabs" aria-label="Chapter workspace">
+            {#each [
+              { id: "draft", label: "Draft" },
+              { id: "outline", label: "Outline" },
+              { id: "alignment", label: "Alignment" },
+            ] as tab (tab.id)}
+              <button
+                type="button"
+                class:active={workspaceTab === tab.id}
+                onclick={() => setWorkspaceTab(tab.id as WorkspaceTab)}
+              >{tab.label}</button>
+            {/each}
+          </nav>
+        {/if}
+        {#if sessionTracker.state && workspaceTab === "draft" && activePair?.draft === activePath}
+          <WritingSessionStrip
+            activeSeconds={sessionTracker.state.activeSeconds}
+            paused={sessionTracker.state.paused}
+            wordsAdded={sessionTracker.wordsAdded()}
+            draftWords={draftWordCount}
+            {targetLabel}
+          />
+        {/if}
+        {#if activePath && masterOutlinePath && activePath === masterOutlinePath}
+          <MasterOutlineBar
+            masterMarkdown={editorContent}
+            caretOffset={editorCaret.from}
+            onExpand={handleExpandFromMaster}
+          />
+        {/if}
+        {#if workspaceTab === "draft" && focus.sceneCards.length}
+          <SceneNavigator
+            scenes={focus.sceneCards}
+            matchedLabels={alignmentReport?.scenes.matched ?? []}
+            onJump={jumpToScene}
+          />
+        {/if}
         {#if activePath && workspaceReady}
           <header class="editor-file-header">
             <FileRenameField
@@ -896,7 +1387,17 @@
             Unlinked plants in outline: {unlinkedPlants.join(", ")} — see Revision panel
           </div>
         {/if}
-        {#if activePath}
+        {#if workspaceTab === "alignment" && activePair}
+          <AlignmentPanel
+            report={alignmentReport}
+            outlineStatus={focus.status}
+            {recommendations}
+            busy={alignmentBusy}
+            onRefresh={runAlignmentRefresh}
+            onDismissRecommendation={dismissRecommendation}
+            onRunAssist={handleRecommendationAssist}
+          />
+        {:else if activePath}
           <Editor
             content={editorContent}
             {mode}
@@ -943,15 +1444,20 @@
           <AssistPanel
             {bridge}
             bookId={bookPath}
-            chapterKey={activePair?.key}
+            chapterKey={expandOutlineEntry?.key ?? activePair?.key}
             taskId={assistTaskId}
             {activePath}
             {selectionText}
             {draftExcerpt}
             chapterFocus={assistWritingContext.chapterFocus}
             relevantCanon={assistWritingContext.relevantCanon}
-            onapply={applyAssistText}
-            onclose={() => (showAssist = false)}
+            expandOutlineMode={Boolean(expandOutlineEntry)}
+            onapply={expandOutlineEntry ? applyExpandOutlineToChapter : applyAssistText}
+            onChapterReviewComplete={handleChapterReviewComplete}
+            onclose={() => {
+              showAssist = false;
+              expandOutlineEntry = null;
+            }}
           />
         {/if}
         {#if showNotesGutter}
@@ -962,6 +1468,13 @@
             onCheckedChange={handleRevisionChecked}
             onSelectPass={(id) => (currentRevisionPass = id)}
             onRunAssist={handleRevisionAssist}
+          />
+        {/if}
+        {#if workspaceTab === "alignment" && alignmentReport}
+          <GoalChecklist
+            items={alignmentReport.mustInclude}
+            checked={goalCheckState}
+            onToggle={handleGoalToggle}
           />
         {/if}
         <ChapterPanel {focus} {chapterTitle} showBanner={mode === "draft"} />
@@ -1022,7 +1535,7 @@
         #2a1810 11px 12px
       )
       1;
-    color: #ebe4dc;
+    color: var(--text-on-topbar);
   }
 
   .brand {
@@ -1040,7 +1553,7 @@
   }
 
   .book-title {
-    color: rgba(235, 228, 220, 0.72);
+    color: var(--text-on-topbar-muted);
     font-size: 0.9rem;
   }
 
@@ -1059,7 +1572,7 @@
     background: transparent;
     padding: 0.35rem 0.75rem;
     border-radius: 6px;
-    color: rgba(235, 228, 220, 0.55);
+    color: var(--text-on-topbar-subtle);
   }
 
   .modes button.active {
@@ -1073,7 +1586,7 @@
     align-items: center;
     gap: 0.65rem;
     font-size: 0.8rem;
-    color: rgba(235, 228, 220, 0.65);
+    color: var(--text-on-topbar-muted);
   }
 
   .host-badge {
@@ -1082,7 +1595,7 @@
     background: rgba(0, 0, 0, 0.2);
     text-transform: uppercase;
     font-size: 0.65rem;
-    color: rgba(235, 228, 220, 0.75);
+    color: var(--text-on-topbar);
   }
 
   .git.dirty {
@@ -1116,7 +1629,58 @@
     grid-template-columns: var(--sidebar-width) 1fr 220px var(--panel-width);
   }
 
+  .nav-switch {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem 0.5rem 0;
+  }
+
+  .nav-switch button {
+    flex: 1;
+    border: none;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-on-leather-muted);
+    padding: 0.35rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .nav-switch button.active {
+    background: linear-gradient(180deg, #faf6ee 0%, #e8dfd4 100%);
+    color: var(--text-on-leather-chip);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .workspace-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.35rem 1rem 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+  }
+
+  .workspace-tabs button {
+    border: none;
+    background: transparent;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .workspace-tabs button.active {
+    background: var(--surface-tab-active);
+    border: 1px solid var(--border);
+    border-bottom-color: var(--surface-tab-active);
+    margin-bottom: -1px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
   .sidebar {
+    color: var(--text-on-leather);
     --text: var(--text-on-leather);
     --text-muted: var(--text-on-leather-muted);
     --accent: var(--accent-on-leather);
@@ -1134,6 +1698,8 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    color: var(--text);
+    background: var(--bg-elevated);
   }
 
   .editor-pane.preparing :global(.editor-host) {
@@ -1148,11 +1714,21 @@
     background: var(--bg-elevated);
   }
 
+  .editor-file-header :global(.rename-field) {
+    --rename-border: var(--border);
+    --rename-focus: var(--accent);
+    --rename-focus-ring: rgba(139, 105, 20, 0.2);
+  }
+
   .editor-file-header :global(.rename-display) {
     font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 600;
     color: var(--text);
+  }
+
+  .editor-file-header :global(.rename-display:hover) {
+    background: rgba(139, 105, 20, 0.1);
   }
 
   .plant-banner {

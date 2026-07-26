@@ -38,6 +38,7 @@ export type LlmTaskId =
   | "review-continuity"
   | "review-voice"
   | "review-structure"
+  | "review-chapter-goals"
   | "fix-paragraph"
   | "brainstorm"
   | "explain-canon";
@@ -153,6 +154,7 @@ export interface InscrivaBridge {
   readFile(path: string): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;
   renameFile(from: string, to: string): Promise<void>;
+  deleteFile(path: string): Promise<void>;
   watchBook(callback: (event: FileEvent) => void): () => void;
   gitPull(): Promise<void>;
   gitAutosave(message?: string): Promise<void>;

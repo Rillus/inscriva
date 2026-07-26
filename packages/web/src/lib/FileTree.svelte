@@ -8,7 +8,8 @@
     activePath?: string;
     defaultCreateDir?: string;
     onSelect: (path: string) => void;
-    onRename: (from: string, newBase: string) => void;
+    onRename: (from: string, newBase: string) => void | Promise<void>;
+    onDelete: (path: string) => void | Promise<void>;
     onCreate: (dir: string, base: string) => void;
     onMove: (from: string, toDir: string) => void;
   }
@@ -19,6 +20,7 @@
     defaultCreateDir = "",
     onSelect,
     onRename,
+    onDelete,
     onCreate,
     onMove,
   }: Props = $props();
@@ -54,6 +56,14 @@
     closeContextMenu();
   }
 
+  function startDeleteFromMenu() {
+    if (contextMenu?.kind !== "file") return;
+    const filePath = contextMenu.path;
+    closeContextMenu();
+    if (renamingPath === filePath) renamingPath = null;
+    void onDelete(filePath);
+  }
+
   function startCreateFromMenu() {
     if (contextMenu?.kind !== "folder") return;
     creatingInDir = contextMenu.dir;
@@ -65,9 +75,12 @@
     renamingPath = null;
   }
 
-  function handleRenameSave(filePath: string, newBase: string) {
-    renamingPath = null;
-    onRename(filePath, newBase);
+  async function handleRenameSave(filePath: string, newBase: string) {
+    try {
+      await onRename(filePath, newBase);
+    } finally {
+      renamingPath = null;
+    }
   }
 
   function handleCreateSave(base: string) {
@@ -210,7 +223,7 @@
 
 {#if contextMenu}
   <div
-    class="context-menu"
+    class="context-menu surface-paper-ink"
     role="menu"
     tabindex="-1"
     style:left="{contextMenu.x}px"
@@ -223,6 +236,9 @@
       </button>
     {:else}
       <button type="button" role="menuitem" onclick={startRenameFromMenu}>Rename</button>
+      <button type="button" role="menuitem" class="danger" onclick={startDeleteFromMenu}>
+        Delete…
+      </button>
     {/if}
   </div>
 {/if}
@@ -295,8 +311,16 @@
   }
 
   .file-row.active {
-    background: var(--accent-soft);
+    background: rgba(232, 200, 150, 0.22);
     border-radius: 4px;
+  }
+
+  .file-row :global(.rename-field) {
+    --rename-bg: rgba(0, 0, 0, 0.38);
+    --rename-fg: var(--text-on-leather, #f4ebe3);
+    --rename-border: rgba(232, 200, 150, 0.55);
+    --rename-focus: #e8c896;
+    --rename-focus-ring: rgba(232, 200, 150, 0.35);
   }
 
   .file {
@@ -307,7 +331,7 @@
     background: transparent;
     padding: 0.3rem 0.5rem;
     border-radius: 4px;
-    color: var(--text);
+    color: var(--text-on-leather, var(--text));
     font-size: 0.85rem;
     cursor: grab;
   }
@@ -321,11 +345,19 @@
   }
 
   .file.active {
-    color: var(--accent);
+    color: #f8eacb;
+    font-weight: 600;
+    background: rgba(232, 200, 150, 0.14);
   }
 
   .file:hover:not(.active) {
-    background: var(--bg-muted);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff8f0;
+  }
+
+  .file:focus-visible {
+    outline: 2px solid rgba(232, 200, 150, 0.55);
+    outline-offset: 1px;
   }
 
   .context-menu {
@@ -355,5 +387,13 @@
 
   .context-menu button:hover {
     background: var(--bg-muted);
+  }
+
+  .context-menu button.danger {
+    color: #b91c1c;
+  }
+
+  .context-menu button.danger:hover {
+    background: rgba(185, 28, 28, 0.12);
   }
 </style>

@@ -130,6 +130,17 @@ export function createMockBridge(book: MockBook): InscrivaBridge {
       }
     },
 
+    async deleteFile(filePath: string) {
+      if (!book.files.has(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+      book.files.delete(filePath);
+      book.files.delete(anchorSidecarPath(filePath));
+      for (const cb of watchers) {
+        cb({ path: filePath, kind: "deleted" });
+      }
+    },
+
     watchBook(callback) {
       watchers.add(callback);
       return () => watchers.delete(callback);
