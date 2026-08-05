@@ -25,6 +25,7 @@ import { loadBookFilesMap } from "./book-files-map.js";
 import { deleteBookFile } from "./delete-book-file.js";
 import { renameBookFile } from "./rename-book-file.js";
 import {
+  assertUserInitiated,
   formatSseChunk,
   previewContext,
   sessionPackMarkdown,
@@ -69,7 +70,19 @@ app.get("/capabilities", async () => ({
   gitPull: true,
   gitInspect: true,
   gitOAuth: githubOAuthConfigured(),
+  platform: "dev-bridge" as const,
 }));
+
+function booksLibraryPath(): string {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? ".";
+  return path.join(home, "Documents", "Inscriva");
+}
+
+app.get("/books/library-path", async () => {
+  const libraryPath = booksLibraryPath();
+  await fs.mkdir(libraryPath, { recursive: true });
+  return { path: libraryPath };
+});
 
 app.post<{ Body: { path: string } }>("/book/open", async (req) => {
   const root = path.resolve(req.body.path);
@@ -275,7 +288,7 @@ app.get("/git/status", async () => {
 
 app.get("/keys", async () => {
   const keys = await loadKeys();
-  const providers = ["openai", "anthropic", "google"].map((provider) => ({
+  const providers = ["openai", "anthropic", "google", "custom"].map((provider) => ({
     provider,
     configured: Boolean(keys[provider]),
   }));
@@ -308,6 +321,12 @@ app.post<{ Body: LlmRequest }>("/llm/session-pack", async (req) => {
 app.post<{ Body: LlmRequest }>("/llm/stream", async (req, reply) => {
   requireBook();
   const request = req.body;
+  try {
+    assertUserInitiated(request);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return reply.code(400).send({ error: message });
+  }
   const keys = await loadKeys();
   const apiKey = keys[request.provider];
   if (!apiKey) {

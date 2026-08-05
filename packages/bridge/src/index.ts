@@ -16,6 +16,7 @@ export type {
   GitStatus,
   PickFolderOptions,
   Host,
+  BridgePlatform,
   InscrivaBridge,
   LlmRequest,
   LlmTaskId,

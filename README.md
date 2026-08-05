@@ -139,13 +139,29 @@ Not automated in-repo. For distribution outside your machine:
 
 ## Deploy (Vercel — web UI)
 
-The repo includes [`vercel.json`](vercel.json) for the static Svelte app in `packages/web`. Connect [github.com/Rillus/inscriva](https://github.com/Rillus/inscriva) in the Vercel dashboard (import project → GitHub → this repo). Vercel will run `pnpm build:web` and publish `packages/web/dist`.
+Deploy the **repository root**, not `apps/dev-bridge`. The dev bridge is a local Node server for development; Vercel hosts only the static Svelte app in `packages/web`.
+
+The repo includes [`vercel.json`](vercel.json). Connect [github.com/Rillus/inscriva](https://github.com/Rillus/inscriva) in the Vercel dashboard (import project → GitHub → this repo).
+
+### Vercel project settings
 
 | Setting | Value |
 |---------|--------|
-| Install | `pnpm install --frozen-lockfile` |
-| Build | `pnpm build:web` |
-| Output | `packages/web/dist` |
+| **Root Directory** | *(leave empty — repository root)* |
+| Framework Preset | Other |
+| Install Command | `pnpm install --frozen-lockfile` |
+| Build Command | `pnpm --filter @inscriva/web build` |
+| Output Directory | `packages/web/dist` |
+
+`vercel.json` at the repo root sets these automatically **if Root Directory is empty**. If you set Root Directory to `apps/dev-bridge`, the build fails with `Command "build:web" not found` — that folder has no web build script.
+
+### Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `Command "build:web" not found` | Project → Settings → General → **Root Directory** → clear it (use repo root) |
+| `Ignored build scripts: esbuild` | Root `package.json` lists `esbuild` under `pnpm.onlyBuiltDependencies`; redeploy after pulling latest |
+| Blank page after deploy | Open `/?demo=1` — real books need a bridge, not Vercel alone |
 
 Optional environment variables (Project → Settings → Environment Variables):
 

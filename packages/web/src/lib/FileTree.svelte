@@ -7,6 +7,7 @@
     tree: TreeNode;
     activePath?: string;
     defaultCreateDir?: string;
+    readOnly?: boolean;
     onSelect: (path: string) => void;
     onRename: (from: string, newBase: string) => void | Promise<void>;
     onDelete: (path: string) => void | Promise<void>;
@@ -18,6 +19,7 @@
     tree,
     activePath,
     defaultCreateDir = "",
+    readOnly = false,
     onSelect,
     onRename,
     onDelete,
@@ -37,11 +39,13 @@
   let skipNextClick = $state(false);
 
   function openFileContextMenu(e: MouseEvent, filePath: string) {
+    if (readOnly) return;
     e.preventDefault();
     contextMenu = { kind: "file", path: filePath, x: e.clientX, y: e.clientY };
   }
 
   function openFolderContextMenu(e: MouseEvent, dir: string) {
+    if (readOnly) return;
     e.preventDefault();
     contextMenu = { kind: "folder", dir, x: e.clientX, y: e.clientY };
   }
@@ -95,7 +99,7 @@
   }
 
   function onFileDragStart(e: DragEvent, path: string) {
-    if (renamingPath) return;
+    if (readOnly || renamingPath) return;
     draggingPath = path;
     skipNextClick = false;
     e.dataTransfer?.setData("text/plain", path);
@@ -146,9 +150,11 @@
   aria-label="Book files"
 >
   <div class="file-tree-toolbar">
-    <button type="button" class="new-file" onclick={() => startCreate()}>
-      New file
-    </button>
+    {#if !readOnly}
+      <button type="button" class="new-file" onclick={() => startCreate()}>
+        New file
+      </button>
+    {/if}
   </div>
 
   {#if creatingInDir !== null}

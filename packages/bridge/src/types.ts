@@ -1,5 +1,7 @@
 export type Host = "bridge" | "browser";
 
+export type BridgePlatform = "macos" | "android" | "dev-bridge" | "browser";
+
 export type GitHostProvider = "github";
 
 export interface BookHandle {
@@ -41,7 +43,9 @@ export type LlmTaskId =
   | "review-chapter-goals"
   | "fix-paragraph"
   | "brainstorm"
-  | "explain-canon";
+  | "explain-canon"
+  | "summarise-character-arc"
+  | "refresh-outline-from-draft";
 
 export interface LlmRequest {
   taskId: LlmTaskId;
@@ -62,6 +66,10 @@ export interface LlmRequest {
   userMessage?: string;
   /** Cap on completion tokens for this request. */
   maxOutputTokens?: number;
+  /** Required — bridge rejects LLM calls without explicit user action. */
+  userInitiated: true;
+  /** OpenAI-compatible base URL (custom provider or Ollama). */
+  providerBaseUrl?: string;
 }
 
 export interface NewBookOptions {
@@ -137,12 +145,15 @@ export interface BridgeCapabilities {
   gitPull: boolean;
   gitInspect: boolean;
   gitOAuth: boolean;
+  platform?: BridgePlatform;
 }
 
 export interface InscrivaBridge {
   getCapabilities?(): Promise<BridgeCapabilities>;
   openBook(path: string): Promise<BookHandle>;
   pickBookFolder?(options?: PickFolderOptions): Promise<string | null>;
+  /** Default directory for cloning books (app storage on Android). */
+  getBooksLibraryPath?(): Promise<string>;
   gitInspect?(path: string): Promise<GitRepoInfo>;
   gitClone?(options: GitCloneOptions): Promise<BookHandle>;
   gitOAuthStart?(provider: GitHostProvider): Promise<GitOAuthStart>;

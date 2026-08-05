@@ -74,6 +74,13 @@ export function createHttpBridge(baseUrl: string): InscrivaBridge {
       return chosen;
     },
 
+    async getBooksLibraryPath() {
+      const { path: libraryPath } = await api<{ path: string }>(
+        "/books/library-path",
+      );
+      return libraryPath;
+    },
+
     async gitInspect(repoPath: string) {
       return api<GitRepoInfo>("/git/inspect", {
         method: "POST",

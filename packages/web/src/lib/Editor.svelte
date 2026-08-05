@@ -28,11 +28,12 @@
     toggleBold,
     toggleItalic,
   } from "./markdown-formatting.js";
-  import type { CanonIndex } from "@inscriva/indexer";
+  import type { CanonIndex, CastIndex } from "@inscriva/indexer";
   import {
     canonHoverExtension,
     wikilinkAutocomplete,
   } from "./codemirror-extensions.js";
+  import { characterClickExtension } from "./character-click.js";
   import { shouldReplaceEditorDocument } from "./editor-sync.js";
   import { shouldNotifyPresentationLifecycle } from "./editor-presentation.js";
   import {
@@ -51,6 +52,8 @@
     content: string;
     mode?: "draft" | "revise" | "read";
     canonIndex?: CanonIndex | null;
+    castIndex?: CastIndex | null;
+    onCharacterClick?: (name: string) => void;
     pendingSuggestion?: PendingSuggestionRange | null;
     restoreViewState?: FileViewState | null;
     awaitPresentation?: boolean;
@@ -69,6 +72,8 @@
     content,
     mode = "draft",
     canonIndex = null,
+    castIndex = null,
+    onCharacterClick,
     pendingSuggestion = null,
     restoreViewState = null,
     awaitPresentation = false,
@@ -145,6 +150,7 @@
   }
   const editableCompartment = new Compartment();
   const canonCompartment = new Compartment();
+  const castCompartment = new Compartment();
   const tableVisualCompartment = new Compartment();
 
   const pendingBridge = {
@@ -175,6 +181,8 @@
     const initialContent = untrack(() => content);
     const initialMode = untrack(() => mode);
     const initialCanon = untrack(() => canonIndex);
+    const initialCast = untrack(() => castIndex);
+    const initialCharacterClick = untrack(() => onCharacterClick);
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
@@ -207,6 +215,12 @@
           canonHoverExtension(initialCanon),
           wikilinkAutocomplete(initialCanon),
         ]),
+        castCompartment.of(
+          characterClickExtension(
+            initialCast,
+            (name) => initialCharacterClick?.(name),
+          ),
+        ),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -438,6 +452,15 @@
         canonHoverExtension(canonIndex),
         wikilinkAutocomplete(canonIndex),
       ]),
+    });
+  });
+
+  $effect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: castCompartment.reconfigure(
+        characterClickExtension(castIndex, (name) => onCharacterClick?.(name)),
+      ),
     });
   });
 

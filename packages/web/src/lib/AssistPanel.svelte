@@ -13,8 +13,10 @@
     LLM_PROVIDERS,
     loadPreferredProvider,
     modelForProvider,
+    providerBaseUrlFor,
     savePreferredProvider,
   } from "./llm-settings.js";
+  import { fetchSessionPack } from "./session-pack.js";
 
   interface Props {
     bridge: InscrivaBridge;
@@ -32,6 +34,7 @@
     onChapterReviewComplete?: (output: string) => void | Promise<void>;
     /** Apply Assist output to the paired chapter outline (not the current editor file). */
     expandOutlineMode?: boolean;
+    refreshOutlineMode?: boolean;
   }
 
   let {
@@ -47,6 +50,7 @@
     onapply,
     onChapterReviewComplete,
     expandOutlineMode = false,
+    refreshOutlineMode = false,
   }: Props = $props();
 
   const isChapterReview = $derived(taskId === "review-chapter-goals");
@@ -60,8 +64,11 @@
     { id: "review-structure", label: "Review structure" },
     { id: "expand-outline", label: "Expand outline (from book outline)" },
     { id: "review-chapter-goals", label: "Review chapter goals" },
+    { id: "refresh-outline-from-draft", label: "Refresh outline from draft" },
     { id: "review-voice", label: "Review voice" },
     { id: "review-continuity", label: "Review continuity" },
+    { id: "brainstorm", label: "Brainstorm (no draft write)" },
+    { id: "summarise-character-arc", label: "Summarise character arc" },
     { id: "explain-canon", label: "Explain canon" },
   ];
 
@@ -106,8 +113,14 @@
       chapterFocus: chapterFocus?.trim() || undefined,
       relevantCanon: relevantCanon?.trim() || undefined,
       userMessage: instruction.trim() || undefined,
+      userInitiated: true,
+      providerBaseUrl: providerBaseUrlFor(provider),
     };
   }
+
+  const isRefreshOutline = $derived(
+    taskId === "refresh-outline-from-draft" || refreshOutlineMode,
+  );
 
   const needsSelection = $derived(taskId === "fix-paragraph");
   const missingSelection = $derived(needsSelection && !selectionText?.trim());
@@ -152,6 +165,22 @@
     beforeText = "";
   }
 
+  let sessionPackMessage = $state("");
+
+  async function copySessionPack() {
+    sessionPackMessage = "";
+    const markdown = await fetchSessionPack(buildRequest());
+    if (!markdown) {
+      sessionPackMessage = "Session pack unavailable (dev bridge + open book required).";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(markdown);
+      sessionPackMessage = "Session pack copied to clipboard.";
+    } catch {
+      sessionPackMessage = "Could not copy to clipboard.";
+    }
+  }
   function acceptSuggestion() {
     onapply?.(output);
     clearOutput();
@@ -221,7 +250,12 @@
       {running ? "Running…" : "Run"}
     </button>
     <button type="button" disabled={running} onclick={viewContext}>View context</button>
+    <button type="button" disabled={running} onclick={copySessionPack}>Copy session pack</button>
   </div>
+
+  {#if sessionPackMessage}
+    <p class="hint">{sessionPackMessage}</p>
+  {/if}
 
   {#if missingSelection}
     <p class="hint">Select text in the editor to fix a paragraph.</p>
@@ -266,6 +300,18 @@
           Writes to <strong>01 Outlines/Chapter Outlines/</strong> for this chapter (creates
           the file if missing). Book and chapter outline formats are documented in the bar
           above the editor.
+        </p>
+      {/if}
+      {#if isRefreshOutline && output.trim() && !running}
+        <div class="apply-row">
+          <button type="button" class="primary" onclick={() => onapply?.(output)}>
+            Apply to chapter outline
+          </button>
+          <button type="button" onclick={clearOutput}>Discard</button>
+        </div>
+        <p class="hint">
+          Opt-in sync: replaces the paired chapter outline with this proposal. Review before
+          applying.
         </p>
       {/if}
       {#if isChapterReview}
@@ -392,5 +438,16 @@
     display: flex;
     gap: 0.5rem;
     margin-top: 0.5rem;
+  }
+
+  @media (max-width: 1100px) {
+    .assist {
+      max-height: 38vh;
+      overflow: auto;
+    }
+
+    .actions {
+      flex-wrap: wrap;
+    }
   }
 </style>

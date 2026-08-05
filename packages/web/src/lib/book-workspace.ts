@@ -4,6 +4,7 @@ import {
   alignmentReportCachePath,
   alignmentReportExportPath,
   appendWritingSessionLine,
+  buildCastIndex,
   formatAiReviewMarkdown,
   parseAiReviewStatus,
   setOutlineStatus,
@@ -22,6 +23,7 @@ import {
   serialiseGoalChecks,
   type AlignmentReport,
   type BookIndex,
+  type CastIndex,
   type ChapterMapOverrides,
   type ChapterPair,
   type GoalChecksByChapter,
@@ -146,11 +148,53 @@ export async function refreshBookIndex(
     draftContents: Record<string, string>;
     outlineContents: Record<string, string>;
     alignmentByChapter?: Record<string, AlignmentReport>;
+    canonPaths?: string[];
   },
 ): Promise<BookIndex> {
-  const index = buildBookIndex(input);
+  const characterFiles = new Map<string, string>();
+  const canonPaths =
+    input.canonPaths ??
+    (await bridge.listFiles()).filter(
+      (p) => p.endsWith(".md") && p.startsWith("00 Canon/"),
+    );
+  await Promise.all(
+    canonPaths.map(async (p) => {
+      characterFiles.set(p, await bridge.readFile(p));
+    }),
+  );
+  const castIndex = buildCastIndex({
+    characterFiles,
+    pairs: input.pairs,
+    draftContents: input.draftContents,
+  });
+  const index = buildBookIndex({
+    ...input,
+    characters: castIndex.characters,
+  });
   await bridge.writeFile(BOOK_INDEX_PATH, serialiseBookIndex(index));
   return index;
+}
+
+export function castIndexFromBookIndex(bookIndex: BookIndex | null): CastIndex | null {
+  if (!bookIndex?.characters?.length) return null;
+  const characters = bookIndex.characters;
+  const byTerm = new Map(
+    characters.flatMap((c) => [
+      [c.name.toLowerCase(), c] as const,
+      ...c.aliases.map((a) => [a.toLowerCase(), c] as const),
+    ]),
+  );
+  return {
+    characters,
+    lookup(term: string) {
+      return byTerm.get(term.trim().toLowerCase());
+    },
+    charactersInChapter(chapterKey: string) {
+      return characters.filter((c) =>
+        c.appearances.some((a) => a.chapterKey === chapterKey),
+      );
+    },
+  };
 }
 
 export async function loadBookIndex(

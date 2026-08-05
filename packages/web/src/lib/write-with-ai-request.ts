@@ -1,5 +1,6 @@
 import type { LlmRequest } from "@inscriva/bridge";
-import type { LlmProviderId } from "@inscriva/llm";
+import { type LlmProviderId } from "@inscriva/llm";
+import { providerBaseUrlFor } from "./llm-settings.js";
 import type { WriteWithAiGenerateContext } from "./write-with-ai.js";
 import type { WritingContext } from "./writing-context.js";
 
@@ -24,6 +25,8 @@ export function buildWriteWithAiLlmRequest(opts: {
     chapterFocus: opts.writing.chapterFocus,
     relevantCanon: opts.writing.relevantCanon,
     maxOutputTokens: opts.maxOutputTokens,
+    userInitiated: true,
+    providerBaseUrl: providerBaseUrlFor(opts.provider),
   };
 
   const { kind, text, prompt } = opts;

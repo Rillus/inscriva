@@ -7,6 +7,7 @@
   import { repoNameFromUrl } from "@inscriva/bridge";
   import { fixtureBookPath } from "./bridge-client.js";
   import GitHubConnect from "./GitHubConnect.svelte";
+  import { preferredWelcomeTab, resolveCloneParentPath } from "./welcome-flow.js";
 
   interface Props {
     bridge: InscrivaBridge;
@@ -42,6 +43,17 @@
   const cloneFolderName = $derived(
     cloneUrl.trim() ? repoNameFromUrl(cloneUrl) : "",
   );
+
+  $effect(() => {
+    tab = preferredWelcomeTab(capabilities);
+  });
+
+  $effect(() => {
+    if (parentPath.trim()) return;
+    void resolveCloneParentPath(bridge, "").then((path) => {
+      if (path) parentPath = path;
+    });
+  });
 
   async function openPath(path: string) {
     if (!path.trim()) return;
@@ -137,7 +149,7 @@
       return;
     }
 
-    let parent = parentPath.trim();
+    let parent = await resolveCloneParentPath(bridge, parentPath);
     if (!parent) {
       const chosen = await pickFolder(
         "parent",

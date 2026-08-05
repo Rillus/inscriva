@@ -30,7 +30,7 @@ pub fn api_key_for(provider: &str) -> Result<String, String> {
 
 #[tauri::command]
 pub fn list_providers() -> Result<Vec<ProviderStatus>, String> {
-    let providers = ["openai", "anthropic", "google"];
+    let providers = ["openai", "anthropic", "google", "custom"];
     Ok(providers
         .iter()
         .map(|p| ProviderStatus {

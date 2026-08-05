@@ -48,6 +48,32 @@ fn recents_path() -> PathBuf {
         .join("recents.json")
 }
 
+pub fn default_books_dir() -> PathBuf {
+    #[cfg(target_os = "android")]
+    {
+        let dir = dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("inscriva")
+            .join("books");
+        let _ = fs::create_dir_all(&dir);
+        return dir;
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let dir = dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("Documents")
+            .join("Inscriva");
+        let _ = fs::create_dir_all(&dir);
+        dir
+    }
+}
+
+#[tauri::command]
+pub fn books_library_path() -> Result<String, String> {
+    Ok(default_books_dir().to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 pub fn open_book(
     path: String,

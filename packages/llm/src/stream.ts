@@ -25,6 +25,7 @@ export async function* runLlmStream(
     apiKey,
     model: request.model,
     maxOutputTokens: request.maxOutputTokens,
+    baseUrl: request.providerBaseUrl,
   });
 }
 

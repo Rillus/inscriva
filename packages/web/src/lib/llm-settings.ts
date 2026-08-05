@@ -10,7 +10,11 @@ export const LLM_PROVIDERS: LlmProviderId[] = [
   "openai",
   "anthropic",
   "google",
+  "custom",
 ];
+
+const CUSTOM_BASE_URL_KEY = "inscriva.llm.customBaseUrl";
+export const DEFAULT_CUSTOM_BASE_URL = "http://127.0.0.1:11434/v1";
 
 export function loadModelOverrides(): Partial<Record<LlmProviderId, string>> {
   try {
@@ -51,6 +55,23 @@ export function savePreferredProvider(provider: LlmProviderId): void {
   localStorage.setItem(PROVIDER_STORAGE_KEY, provider);
 }
 
+export function loadCustomBaseUrl(): string {
+  try {
+    return localStorage.getItem(CUSTOM_BASE_URL_KEY)?.trim() || DEFAULT_CUSTOM_BASE_URL;
+  } catch {
+    return DEFAULT_CUSTOM_BASE_URL;
+  }
+}
+
+export function saveCustomBaseUrl(url: string): void {
+  localStorage.setItem(CUSTOM_BASE_URL_KEY, url.trim());
+}
+
+export function providerBaseUrlFor(provider: LlmProviderId): string | undefined {
+  if (provider !== "custom") return undefined;
+  return loadCustomBaseUrl();
+}
+
 /** Pick the LLM provider to use: saved preference if configured, else first configured. */
 export function pickLlmProvider(
   statuses: ProviderStatus[],
@@ -75,7 +96,7 @@ export function pickLlmProvider(
 }
 
 export function missingLlmProviderMessage(): string {
-  return "No LLM API key configured. Open Settings → API keys and add a key for OpenAI, Anthropic, or Google.";
+  return "No LLM API key configured. Open Settings → API keys and add a key for OpenAI, Anthropic, Google, or Custom (Ollama).";
 }
 
 export function noApiKeyForProviderMessage(provider: LlmProviderId): string {
@@ -90,6 +111,8 @@ function providerEnvVar(provider: LlmProviderId): string {
       return "ANTHROPIC_API_KEY";
     case "google":
       return "GOOGLE_API_KEY";
+    case "custom":
+      return "CUSTOM_API_KEY (any value for local Ollama)";
     default:
       return "API key env var";
   }

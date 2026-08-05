@@ -26,6 +26,19 @@ export {
 } from "./canon-index.js";
 
 export {
+  buildCastIndex,
+  castCharactersForBookIndex,
+  parseCharacterDefinitions,
+  type CastAppearance,
+  type CastCharacter,
+  type CastDialogue,
+  type CastIndex,
+  type CastIndexInput,
+  type CastMention,
+  type CharacterDefinition,
+} from "./cast-index.js";
+
+export {
   buildAlignmentReport,
   formatAlignmentMarkdown,
   matchSceneHeadings,
@@ -115,6 +128,30 @@ export {
   findMasterOutlinePath,
   MASTER_OUTLINE_PATH,
 } from "./master-outline.js";
+
+export { reconcileMasterOutlineStatuses } from "./master-outline-reconcile.js";
+
+export {
+  appendSceneLedgerEntries,
+  extractDraftSceneHeadings,
+  formatSceneLedgerEntry,
+  SCENE_LEDGER_PATH,
+} from "./scene-ledger.js";
+
+export {
+  characterAppearancesPath,
+  formatCharacterAppearancesMarkdown,
+  GENERATED_APPEARANCES_DIR,
+} from "./character-appearances.js";
+
+export {
+  checkStyleGuideViolations,
+  findStyleGuidePath,
+  parseStyleGuideRules,
+  type StyleGuideRule,
+  type StyleGuideRuleKind,
+  type StyleGuideViolation,
+} from "./style-guide-rules.js";
 
 export {
   applyExpandedChapterOutline,

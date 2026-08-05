@@ -1,26 +1,43 @@
 <script lang="ts">
   import type { InscrivaBridge, ProviderStatus } from "@inscriva/bridge";
-  import { DEFAULT_MODELS } from "@inscriva/llm";
+  import { DEFAULT_MODELS, authInfoForProvider } from "@inscriva/llm";
   import {
+    DEFAULT_CUSTOM_BASE_URL,
     LLM_PROVIDERS,
+    loadCustomBaseUrl,
     loadModelOverrides,
     modelForProvider,
+    saveCustomBaseUrl,
     saveModelOverride,
     savePreferredProvider,
     type LlmProviderId,
   } from "./llm-settings.js";
 
+  import {
+    DEFAULT_RECOMMENDATION_SETTINGS,
+    saveRecommendationSettings,
+    type RecommendationSettings,
+  } from "./recommendation-settings.js";
+  import type { RecommendationId } from "@inscriva/indexer";
+
   interface Props {
     bridge: InscrivaBridge;
     open: boolean;
+    recommendationSettings?: RecommendationSettings;
     onclose: () => void;
   }
 
-  let { bridge, open, onclose }: Props = $props();
+  let {
+    bridge,
+    open,
+    recommendationSettings = $bindable(DEFAULT_RECOMMENDATION_SETTINGS),
+    onclose,
+  }: Props = $props();
 
   let providers = $state<ProviderStatus[]>([]);
   let keyInputs = $state<Record<string, string>>({});
   let modelInputs = $state<Partial<Record<LlmProviderId, string>>>({});
+  let customBaseUrl = $state(DEFAULT_CUSTOM_BASE_URL);
   let message = $state("");
   let messageTone = $state<"success" | "error" | null>(null);
   let busy = $state(false);
@@ -60,6 +77,7 @@
   async function refresh() {
     providers = await bridge.listProviders();
     modelInputs = { ...loadModelOverrides() };
+    customBaseUrl = loadCustomBaseUrl();
     for (const id of LLM_PROVIDERS) {
       if (!modelInputs[id]) modelInputs[id] = modelForProvider(id);
     }
@@ -115,6 +133,25 @@
     }
     showConfirmation("Default models saved.");
   }
+
+  const RULE_LABELS: Record<RecommendationId, string> = {
+    "word-target-near": "Word target near (90–110%)",
+    "word-target-over": "Word target over band",
+    "unlinked-plants": "Unlinked plants",
+    "alignment-stale": "Alignment stale",
+    "alignment-warnings": "Alignment warnings",
+  };
+
+  function toggleRecommendationRule(id: RecommendationId, enabled: boolean) {
+    const disabled = new Set(recommendationSettings.disabledRuleIds);
+    if (enabled) disabled.delete(id);
+    else disabled.add(id);
+    recommendationSettings = {
+      ...recommendationSettings,
+      disabledRuleIds: [...disabled],
+    };
+    saveRecommendationSettings(recommendationSettings);
+  }
 </script>
 
 {#if open}
@@ -146,10 +183,12 @@
       <h3>LLM providers (BYOK)</h3>
       <p class="hint">
         API keys are stored in the native bridge secure store — never in your book repo.
+        LLM sign-in OAuth is not available in v1 — use API keys from each provider&apos;s developer console.
       </p>
 
       {#each LLM_PROVIDERS as provider}
         {@const status = providers.find((p) => p.provider === provider)}
+        {@const auth = authInfoForProvider(provider)}
         <div class="provider-row">
           <div class="provider-head">
             <strong>{provider}</strong>
@@ -157,6 +196,9 @@
               {status?.configured ? "Configured" : "Not set"}
             </span>
           </div>
+          {#if auth}
+            <p class="auth-hint">{auth.hint}</p>
+          {/if}
           <label>
             API key
             <input
@@ -190,6 +232,67 @@
       <button type="button" class="primary" disabled={busy} onclick={saveModels}>
         Save model defaults
       </button>
+
+      <div class="provider-row custom-url">
+        <div class="provider-head">
+          <strong>Custom base URL</strong>
+        </div>
+        <p class="hint">
+          OpenAI-compatible endpoint for the <strong>custom</strong> provider (e.g. Ollama
+          at <code>http://127.0.0.1:11434/v1</code>). Use any API key value for local servers.
+        </p>
+        <label>
+          Base URL
+          <input type="url" bind:value={customBaseUrl} placeholder={DEFAULT_CUSTOM_BASE_URL} />
+        </label>
+        <button
+          type="button"
+          disabled={busy}
+          onclick={() => {
+            saveCustomBaseUrl(customBaseUrl);
+            showConfirmation("Custom base URL saved.");
+          }}
+        >
+          Save custom URL
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h3>Recommendations</h3>
+      <p class="hint">
+        Local nudges only — they never call AI automatically. Disable rules you do not want
+        to see in the Alignment tab.
+      </p>
+      <label class="toggle-row">
+        <input
+          type="checkbox"
+          checked={recommendationSettings.enabled}
+          onchange={(e) => {
+            recommendationSettings = {
+              ...recommendationSettings,
+              enabled: (e.currentTarget as HTMLInputElement).checked,
+            };
+            saveRecommendationSettings(recommendationSettings);
+          }}
+        />
+        Show recommendations
+      </label>
+      {#each Object.entries(RULE_LABELS) as [id, label]}
+        <label class="toggle-row">
+          <input
+            type="checkbox"
+            checked={!recommendationSettings.disabledRuleIds.includes(id as RecommendationId)}
+            disabled={!recommendationSettings.enabled}
+            onchange={(e) =>
+              toggleRecommendationRule(
+                id as RecommendationId,
+                (e.currentTarget as HTMLInputElement).checked,
+              )}
+          />
+          {label}
+        </label>
+      {/each}
     </section>
     </div>
   </dialog>
@@ -287,9 +390,24 @@
     color: var(--text-muted);
   }
 
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.35rem 0;
+    font-size: 0.8rem;
+  }
+
   .provider-row {
     padding: 0.85rem 0;
     border-top: 1px solid var(--border);
+  }
+
+  .auth-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
   }
 
   .provider-head {

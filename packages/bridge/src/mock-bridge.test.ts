@@ -102,7 +102,7 @@ describe("createMockBridge", () => {
       connected: false,
       configured: false,
     });
-    expect(await bridge.listProviders()).toHaveLength(3);
+    expect(await bridge.listProviders()).toHaveLength(4);
     await expect(bridge.gitClone({ url: "x", parentPath: "y" })).rejects.toThrow(
       "native bridge",
     );

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Inscriva",
+  "version": "0.0.1",
+  "identifier": "app.inscriva.mobile",
+  "build": {
+    "beforeDevCommand": "VITE_TAURI_DEV=1 pnpm --filter @inscriva/web dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm --filter @inscriva/web build",
+    "frontendDist": "../../../packages/web/dist"
+  },
+  "app": {
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.png"],
+    "android": {
+      "minSdkVersion": 24
+    }
+  }
+}

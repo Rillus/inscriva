@@ -1,0 +1,18 @@
+{
+  "name": "@inscriva/mobile-android",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "tauri android dev",
+    "build": "pnpm --filter @inscriva/web build && tauri android build",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@inscriva/bridge": "workspace:*",
+    "@tauri-apps/api": "^2.4.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0"
+  }
+}

@@ -34,6 +34,7 @@ describe("buildWriteWithAiLlmRequest", () => {
       chapterFocus: writing.chapterFocus,
       relevantCanon: writing.relevantCanon,
       userMessage: "She left.\n\nMake it tense.",
+      userInitiated: true,
     });
   });
 

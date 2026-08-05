@@ -3,6 +3,7 @@ import { parseBookFilePayload } from "./file-events.js";
 import type {
   BookHandle,
   BridgeCapabilities,
+  BridgePlatform,
   FileEvent,
   GitCloneOptions,
   GitCloneRemoteOptions,
@@ -29,6 +30,17 @@ export type MenuAction =
   | "mode_read";
 
 let fileWatchBootstrapped = false;
+
+function detectTauriPlatform(): BridgePlatform {
+  if (typeof navigator !== "undefined" && /android/i.test(navigator.userAgent)) {
+    return "android";
+  }
+  return "macos";
+}
+
+function isAndroidShell(): boolean {
+  return detectTauriPlatform() === "android";
+}
 
 async function ensureFileWatchListeners(
   watchers: Set<(event: FileEvent) => void>,
@@ -64,12 +76,17 @@ export function createTauriBridge(): InscrivaBridge {
         gitOAuth = false;
       }
       return {
-        folderPicker: true,
+        folderPicker: !isAndroidShell(),
         gitClone: true,
         gitPull: true,
         gitInspect: true,
         gitOAuth,
+        platform: detectTauriPlatform(),
       };
+    },
+
+    async getBooksLibraryPath() {
+      return invoke<string>("books_library_path");
     },
 
     async openBook(path: string) {
@@ -77,6 +94,7 @@ export function createTauriBridge(): InscrivaBridge {
     },
 
     async pickBookFolder(options?: PickFolderOptions) {
+      if (isAndroidShell()) return null;
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({
         directory: true,

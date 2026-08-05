@@ -682,7 +682,7 @@ See **§7.7–§7.11** for full LLM and structure spec.
 
 - [x] Monsterosso outline parser (`Scene N`, turn-by-chapter-end, per-scene must/NOT) — `packages/indexer/src/outline-parse.ts`
 - [x] Chapter pairing: numeric `01` filenames + H1 `ChNN` — `chapter-map.json` overrides loaded (edit via file tree / manual JSON for now)
-- [ ] Chapter-map pairing **UI** (form in chapter rail)
+- [x] Chapter-map pairing **UI** (form in chapter rail)
 - [x] Chapter rail + chapter workspace (draft / outline / alignment tabs); **chapter view default**, toggle to file view
 - [x] Deterministic alignment report — cache `.inscriva/reports/` + export `03 Revision/Alignment/{chapterKey}.md` + Alignment tab
 - [x] Writing session clock + words/target strip; append `.inscriva/writing-sessions.jsonl` + `03 Revision/Writing log.md` (§7.12)
@@ -692,7 +692,7 @@ See **§7.7–§7.11** for full LLM and structure spec.
 - [x] AI recommendations engine (local rules only; word-target band **90–110%**; no auto LLM)
 - [x] Plant checks in alignment panel + existing revision banner
 
-### Phase 2b — LLM assist + revision (5–7 weeks) — *in progress*
+### Phase 2b — LLM assist + revision (5–7 weeks) ✓
 
 - [x] `packages/llm`: OpenAI, Anthropic, Google adapters + context builder
 - [x] Bridge: LLM proxy (streaming) — `apps/dev-bridge` + Tauri `llm_stream`
@@ -701,34 +701,37 @@ See **§7.7–§7.11** for full LLM and structure spec.
 - [x] Settings: BYOK per provider, default models per provider
 - [x] Revision pass modes + checklist (`RevisionPanel`; plant banner via `findUnlinkedPlants`)
 - [x] “View context” before send (Assist panel; dev-bridge `/llm/preview`)
-- [ ] Tasks: `review-chapter-goals`, `refresh-outline-from-draft` (opt-in, per §7.11)
-- [ ] `expand-outline` / `brainstorm` in Assist task picker (prompts exist in `packages/llm`)
-- [ ] Settings: recommendation thresholds (depends on §7.11 engine — Phase 2a)
-- [ ] Structure pass → deterministic alignment then optional AI (alignment tab is Phase 2a)
-- [ ] Plant `P##` linking in draft; canon soft warnings
-- [ ] Session Pack export UI (backend + `fetchSessionPack`; no app action yet)
-- [ ] Bridge guard: reject `llmStream` unless request includes `userInitiated: true`
+- [x] Tasks: `review-chapter-goals`, `refresh-outline-from-draft` (opt-in, per §7.11)
+- [x] `expand-outline` / `brainstorm` in Assist task picker (prompts exist in `packages/llm`)
+- [x] Settings: recommendation thresholds (depends on §7.11 engine — Phase 2a)
+- [x] Structure pass → deterministic alignment then optional AI (alignment tab is Phase 2a)
+- [x] Plant `P##` linking in draft; canon soft warnings
+- [x] Session Pack export UI (Assist → Copy session pack)
+- [x] Bridge guard: reject `llmStream` unless request includes `userInitiated: true`
 
-### Phase 2c — Cast index (3–4 weeks)
+### Phase 2c — Cast index (3–4 weeks) ✓
 
-- [ ] Parse Character Bible into entities (Monsterosso single-file + per-character files)
-- [ ] Cast index build on watch; mention + dialogue heuristics
-- [ ] Character sheet UI + jump-to-draft
-- [ ] Click character name in editor → sheet
-- [ ] Task: `summarise-character-arc` (opt-in)
-- [ ] Optional generated `appearances.md` (book config)
+- [x] Parse Character Bible into entities (Monsterosso single-file + per-character files)
+- [x] Cast index build on watch; mention + dialogue heuristics
+- [x] Character sheet UI + jump-to-draft
+- [x] Click character name in editor → sheet
+- [x] Task: `summarise-character-arc` (opt-in)
+- [x] Optional generated `appearances.md` (book config)
 
-### Phase 3 — Android + expansions (4–6 weeks)
+### Phase 3 — Android + expansions — *complete (device QA ongoing)*
 
-- [ ] Tauri Android: clone repo, mobile layout, sync on resume, Assist panel (◐)
-- [ ] OpenAI-compatible custom base URL
-- [ ] PWA / browser + Sync API (if needed)
-- [ ] Read-only sharing
-- [ ] Style Guide rule packs (deterministic + LLM)
-- [ ] Provider OAuth where APIs support it (research per vendor)
-- [ ] Chapter board view; mobile chapter workspace (◐)
-- [ ] Scene Ledger auto-suggest from draft headings (deterministic; AI optional)
-- [ ] Master Outline reconcile from chapter statuses (opt-in)
+- [x] Tauri Android scaffold (`apps/mobile-android`); device QA on real hardware (◐)
+- [x] Android books library path + GitHub clone without folder picker
+- [x] Sync on resume (visibility + bfcache → pull + refresh)
+- [x] OpenAI-compatible custom base URL
+- [x] PWA shell (manifest + service worker; Sync API deferred)
+- [x] Read-only sharing (`?share=1`)
+- [x] Style Guide rule packs (deterministic + LLM voice assist)
+- [x] Provider OAuth research + Settings auth hints (`docs/llm-provider-oauth.md`)
+- [x] Chapter board view; mobile chapter workspace (sidebar overlay toggle)
+- [x] Scene Ledger auto-suggest from draft headings (deterministic; AI optional)
+- [x] Master Outline reconcile from chapter statuses (opt-in)
+- [x] Manual testing checklist (`docs/manual-testing-checklist.md`)
 
 ---
 

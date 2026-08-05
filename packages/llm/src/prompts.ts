@@ -19,6 +19,10 @@ const TASK_PROMPTS: Record<LlmTaskId, string> = {
     "You are Inscriva's brainstorm partner (task: brainstorm). Respond with bullets and questions only — never draft chapter prose.",
   "explain-canon":
     "You are Inscriva's canon explainer (task: explain-canon). Summarise the canon note in plain language for the author.",
+  "summarise-character-arc":
+    "You are Inscriva's character arc summariser (task: summarise-character-arc). Using the Character Bible and draft mention snippets provided, write an author-facing arc summary across chapters so far. Note appearances, emotional turns, and open threads. Do not edit or rewrite bible text.",
+  "refresh-outline-from-draft":
+    "You are Inscriva's outline sync assistant (task: refresh-outline-from-draft). Propose updates to the chapter outline based on what the draft actually delivers: scene outcomes, continuity hooks, and optional Status. Preserve the required ## headings (Status, Story question, Turn, Scenes, Must include, NOT, Word target, Continuity). Output the full revised outline markdown only — no commentary.",
 };
 
 export function getTaskSystemPrompt(taskId: LlmTaskId): string {

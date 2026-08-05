@@ -1,4 +1,5 @@
 import type { AlignmentReport } from "./alignment.js";
+import type { CastCharacter } from "./cast-index.js";
 import type { ChapterPair } from "./chapter-pairing.js";
 import { parseChapterFocus } from "./outline-parse.js";
 import { countWords, parseWordTarget } from "./word-target.js";
@@ -20,6 +21,7 @@ export interface BookIndex {
   version: 1;
   updatedAt: string;
   chapters: BookIndexChapter[];
+  characters?: CastCharacter[];
 }
 
 export function alignmentSummaryFromReport(
@@ -46,6 +48,7 @@ export function buildBookIndex(input: {
   draftContents: Record<string, string>;
   outlineContents: Record<string, string>;
   alignmentByChapter?: Record<string, AlignmentReport>;
+  characters?: CastCharacter[];
 }): BookIndex {
   const chapters: BookIndexChapter[] = input.pairs.map((pair) => {
     const draftMd = pair.draft ? input.draftContents[pair.draft] ?? "" : "";
@@ -73,6 +76,7 @@ export function buildBookIndex(input: {
     version: 1,
     updatedAt: new Date().toISOString(),
     chapters,
+    characters: input.characters,
   };
 }
 

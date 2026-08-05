@@ -1,0 +1,17 @@
+{
+  "name": "Inscriva",
+  "short_name": "Inscriva",
+  "description": "Book workflow editor — chapters, canon, and cast intelligence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2a1810",
+  "theme_color": "#4a3024",
+  "icons": [
+    {
+      "src": "/inscriva-mark-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

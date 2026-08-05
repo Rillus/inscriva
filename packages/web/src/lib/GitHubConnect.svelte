@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { GitHostStatus, GitRemoteRepo, InscrivaBridge } from "@inscriva/bridge";
+  import { resolveCloneParentPath } from "./welcome-flow.js";
 
   interface Props {
     bridge: InscrivaBridge;
@@ -38,6 +39,13 @@
 
   $effect(() => {
     refreshStatus();
+  });
+
+  $effect(() => {
+    if (parentPath.trim()) return;
+    void resolveCloneParentPath(bridge, "").then((path) => {
+      if (path) parentPath = path;
+    });
   });
 
   async function refreshStatus() {
@@ -114,7 +122,7 @@
   async function cloneSelected() {
     if (!selected || !bridge.gitCloneRemote) return;
 
-    let parent = parentPath.trim();
+    let parent = await resolveCloneParentPath(bridge, parentPath);
     if (!parent) {
       const chosen = await pickFolder("Choose where to clone the book");
       if (!chosen) return;

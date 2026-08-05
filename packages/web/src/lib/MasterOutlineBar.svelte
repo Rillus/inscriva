@@ -10,9 +10,17 @@
     masterMarkdown: string;
     caretOffset: number;
     onExpand: (entry: MasterChapterEntry) => void;
+    onReconcile?: () => void;
+    reconcileBusy?: boolean;
   }
 
-  let { masterMarkdown, caretOffset, onExpand }: Props = $props();
+  let {
+    masterMarkdown,
+    caretOffset,
+    onExpand,
+    onReconcile,
+    reconcileBusy = false,
+  }: Props = $props();
 
   const chapters = $derived(parseMasterOutline(masterMarkdown).chapters);
   const atCaret = $derived(findMasterChapterAtOffset(masterMarkdown, caretOffset));
@@ -38,6 +46,16 @@
     >
       Expand into chapter outline
     </button>
+    {#if onReconcile}
+      <button
+        type="button"
+        class="reconcile"
+        disabled={reconcileBusy}
+        onclick={() => onReconcile?.()}
+      >
+        {reconcileBusy ? "Syncing…" : "Sync chapter statuses"}
+      </button>
+    {/if}
   </div>
   <button
     type="button"
@@ -85,6 +103,20 @@
   .expand:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .reconcile {
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .reconcile:disabled {
+    opacity: 0.5;
   }
 
   .guide-toggle {

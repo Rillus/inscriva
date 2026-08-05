@@ -10,6 +10,7 @@
     onCheckedChange?: (passId: RevisionPassId, checked: boolean) => void;
     onSelectPass?: (passId: RevisionPassId) => void;
     onRunAssist?: (taskId: LlmTaskId) => void;
+    onInsertPlant?: (plantId: string) => void;
   }
 
   let {
@@ -19,6 +20,7 @@
     onCheckedChange,
     onSelectPass,
     onRunAssist,
+    onInsertPlant,
   }: Props = $props();
 
   const activePass = $derived(
@@ -41,7 +43,14 @@
       </p>
       <ul>
         {#each unlinkedPlants as plantId}
-          <li><code>{plantId}</code></li>
+          <li>
+            <code>{plantId}</code>
+            {#if onInsertPlant}
+              <button type="button" class="insert-plant" onclick={() => onInsertPlant(plantId)}>
+                Insert in draft
+              </button>
+            {/if}
+          </li>
         {/each}
       </ul>
     </div>
@@ -141,6 +150,16 @@
   .plant-warn code {
     font-size: 0.8rem;
     font-weight: 600;
+  }
+
+  .insert-plant {
+    margin-left: 0.35rem;
+    border: none;
+    background: transparent;
+    color: #92400e;
+    font-size: 0.68rem;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   .pass-list {

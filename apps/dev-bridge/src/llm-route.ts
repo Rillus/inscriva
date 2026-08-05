@@ -1,6 +1,12 @@
 import type { LlmRequest } from "@inscriva/bridge";
 import { formatSessionPack, previewContext, runLlmStream } from "@inscriva/llm";
 
+export function assertUserInitiated(request: LlmRequest): void {
+  if (request.userInitiated !== true) {
+    throw new Error("LLM requests require userInitiated: true");
+  }
+}
+
 export function formatSseChunk(payload: Record<string, unknown>): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }

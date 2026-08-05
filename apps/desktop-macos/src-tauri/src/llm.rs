@@ -19,6 +19,7 @@ pub struct LlmRequest {
     pub selection_text: Option<String>,
     pub draft_excerpt: Option<String>,
     pub user_message: Option<String>,
+    pub user_initiated: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -60,6 +61,8 @@ fn task_system_prompt(task_id: &str) -> String {
         "fix-paragraph" => "You are Inscriva's line editor (task: fix-paragraph). Return a single replacement paragraph that preserves facts and POV.",
         "brainstorm" => "You are Inscriva's brainstorm partner (task: brainstorm). Respond with bullets and questions only — never draft chapter prose.",
         "explain-canon" => "You are Inscriva's canon explainer (task: explain-canon). Summarise the canon note in plain language for the author.",
+        "summarise-character-arc" => "You are Inscriva's character arc summariser (task: summarise-character-arc). Using the Character Bible and draft mention snippets provided, write an author-facing arc summary across chapters so far. Do not edit bible text.",
+        "refresh-outline-from-draft" => "You are Inscriva's outline sync assistant (task: refresh-outline-from-draft). Propose updates to the chapter outline based on the draft. Preserve required ## headings. Output full revised outline markdown only.",
         _ => "You are Inscriva's writing assistant.",
     };
     format!(
@@ -251,6 +254,9 @@ pub async fn llm_stream(
     app: AppHandle,
     state: State<'_, Mutex<BookState>>,
 ) -> Result<(), String> {
+    if request.user_initiated != Some(true) {
+        return Err("LLM requests require userInitiated: true".into());
+    }
     let root = require_root(&state)?;
     let api_key = api_key_for(&request.provider)?;
     let files = load_book_files(&root)?;

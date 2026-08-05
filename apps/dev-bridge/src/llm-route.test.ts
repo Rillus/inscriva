@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  assertUserInitiated,
   formatSseChunk,
   previewContext,
   sessionPackMarkdown,
@@ -9,6 +10,21 @@ import {
 describe("formatSseChunk", () => {
   it("serialises JSON payloads as SSE data lines", () => {
     expect(formatSseChunk({ text: "hi" })).toBe('data: {"text":"hi"}\n\n');
+  });
+});
+
+describe("assertUserInitiated", () => {
+  it("throws when userInitiated is not true", () => {
+    expect(() =>
+      assertUserInitiated({
+        taskId: "brainstorm",
+        provider: "openai",
+        model: "gpt-4o-mini",
+        bookId: "b",
+        userInitiated: true as const,
+        userInitiated: false as unknown as true,
+      }),
+    ).toThrow(/userInitiated/);
   });
 });
 
@@ -23,6 +39,7 @@ describe("previewContext", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "book-1",
+        userInitiated: true as const,
       },
       files,
     );
@@ -41,6 +58,7 @@ describe("sessionPackMarkdown", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "book-1",
+        userInitiated: true as const,
       },
       files,
       "Test Book",
@@ -85,6 +103,7 @@ describe("streamLlmResponse", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "book-1",
+        userInitiated: true as const,
       },
       files,
       "sk-test",

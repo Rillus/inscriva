@@ -47,6 +47,14 @@ export function resolveRecommendationAction(
         label: "Refresh checks",
         steps: "Re-runs the deterministic checks in this tab (word count, scenes, must-include). No AI tokens.",
       };
+    case "refresh-outline-from-draft":
+      return {
+        kind: "assist",
+        taskId: "refresh-outline-from-draft",
+        label: "Refresh outline from draft",
+        steps:
+          "Opens Assist → Refresh outline from draft. Proposes outline updates from the current draft — apply per run after review.",
+      };
     default:
       return null;
   }

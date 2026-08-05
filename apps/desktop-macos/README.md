@@ -11,4 +11,4 @@ pnpm build:desktop  # release .app
 
 Rust (`rustup`) is required. GitHub OAuth env vars: `apps/dev-bridge/.env` or `src-tauri/.env` (see `.env.example`).
 
-Phase 3 will add Tauri Android; the same `packages/web` build is intended for all shells.
+Phase 3 adds Tauri Android (`apps/mobile-android`); the same `packages/web` build is intended for all shells.

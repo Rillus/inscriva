@@ -1,6 +1,7 @@
 use git2::build::RepoBuilder;
 use git2::{Repository, StatusOptions};
 use serde::Serialize;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
@@ -111,7 +112,7 @@ pub fn git_clone(
 ) -> Result<BookHandle, String> {
     let parent = PathBuf::from(&parent_path);
     if !parent.is_dir() {
-        return Err("Parent folder does not exist".into());
+        fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
     }
     let name = book::repo_name_from_url(&url);
     let target = parent.join(&name);

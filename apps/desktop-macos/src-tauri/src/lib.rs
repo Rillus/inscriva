@@ -90,18 +90,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Mutex::new(BookState::default()))
         .setup(|app| {
-            let menu = build_menu(app.handle())?;
-            app.set_menu(menu)?;
+            #[cfg(desktop)]
+            {
+                let menu = build_menu(app.handle())?;
+                app.set_menu(menu)?;
 
-            let handle = app.handle().clone();
-            app.on_menu_event(move |_app, event| {
-                let _ = handle.emit("menu-action", event.id().as_ref());
-            });
+                let handle = app.handle().clone();
+                app.on_menu_event(move |_app, event| {
+                    let _ = handle.emit("menu-action", event.id().as_ref());
+                });
+            }
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             book::open_book,
+            book::books_library_path,
             book::list_files,
             book::read_file,
             book::write_file,

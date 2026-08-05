@@ -52,6 +52,10 @@ export function createMockBridge(book: MockBook): InscrivaBridge {
       return null;
     },
 
+    async getBooksLibraryPath() {
+      return `${book.path}/../books-library`;
+    },
+
     async gitInspect(path: string) {
       return { path, isRepo: false, remotes: [] };
     },
@@ -171,6 +175,7 @@ export function createMockBridge(book: MockBook): InscrivaBridge {
         { provider: "openai", configured: false },
         { provider: "anthropic", configured: false },
         { provider: "google", configured: false },
+        { provider: "custom", configured: false },
       ];
     },
 
