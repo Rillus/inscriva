@@ -8,23 +8,29 @@
   import { fixtureBookPath } from "./bridge-client.js";
   import GitHubConnect from "./GitHubConnect.svelte";
   import { preferredWelcomeTab, resolveCloneParentPath } from "./welcome-flow.js";
+  import BrowserOnlyBanner from "./BrowserOnlyBanner.svelte";
+  import { requiresLocalApp, type WritingMode } from "./writing-mode.js";
 
   interface Props {
     bridge: InscrivaBridge;
     capabilities: BridgeCapabilities;
     recents: string[];
+    writingMode?: WritingMode;
     tab?: "open" | "git" | "new";
     onOpen: (path: string) => void;
     onDemo: () => void;
+    onDownload?: () => void;
   }
 
   let {
     bridge,
     capabilities,
     recents,
+    writingMode = "dev-bridge",
     tab = $bindable("open"),
     onOpen,
     onDemo,
+    onDownload,
   }: Props = $props();
 
   let pathInput = $state(fixtureBookPath());
@@ -43,6 +49,7 @@
   const cloneFolderName = $derived(
     cloneUrl.trim() ? repoNameFromUrl(cloneUrl) : "",
   );
+  const staticWeb = $derived(requiresLocalApp(writingMode));
 
   $effect(() => {
     tab = preferredWelcomeTab(capabilities);
@@ -201,6 +208,10 @@
     <img class="wordmark" src="/inscriva.svg" width="172" height="64" alt="Inscriva" />
     <p class="lede">Local-first writing for long-form fiction. One book, one Git repo.</p>
 
+    {#if staticWeb}
+      <BrowserOnlyBanner {onDownload} onDemo={onDemo} />
+    {/if}
+
     <div class="tabs">
       <button type="button" class:active={tab === "open"} onclick={() => (tab = "open")}>
         Open
@@ -216,7 +227,13 @@
     </div>
 
     {#if tab === "open"}
-      {#if capabilities.folderPicker}
+      {#if staticWeb}
+        <p class="static-note">
+          Open folder and recent books require the desktop app or local dev bridge.
+        </p>
+      {/if}
+
+      {#if capabilities.folderPicker && !staticWeb}
         <button
           type="button"
           class="primary"
@@ -227,8 +244,8 @@
         </button>
       {/if}
 
-      <details class="manual" open={!capabilities.folderPicker}>
-        <summary>Or enter path manually</summary>
+      <details class="manual" open={!capabilities.folderPicker || staticWeb}>
+        <summary>{staticWeb ? "Path entry (desktop app required)" : "Or enter path manually"}</summary>
         <label>
           <span>Book folder path</span>
           <input
@@ -241,14 +258,14 @@
         <button
           type="button"
           class="secondary"
-          disabled={busy}
+          disabled={busy || staticWeb}
           onclick={() => openPath(pathInput)}
         >
           Open
         </button>
       </details>
 
-      {#if recents.length}
+      {#if recents.length && !staticWeb}
         <div class="recents">
           <p>Recent books</p>
           <ul>
@@ -261,11 +278,24 @@
         </div>
       {/if}
     {:else if tab === "git"}
-      <div class="git-modes">
+      {#if staticWeb}
+        <p class="static-note">
+          Git clone and GitHub sign-in need the macOS app or
+          <code>pnpm dev:bridge</code> on your machine.
+          {#if onDownload}
+            <button type="button" class="inline-link" onclick={() => onDownload?.()}>
+              See download options
+            </button>
+          {/if}
+        </p>
+      {/if}
+
+      <div class="git-modes" class:disabled={staticWeb}>
         {#if capabilities.gitOAuth}
           <button
             type="button"
             class:active={gitMode === "github"}
+            disabled={staticWeb}
             onclick={() => {
               gitMode = "github";
               error = "";
@@ -277,6 +307,7 @@
         <button
           type="button"
           class:active={gitMode === "local"}
+          disabled={staticWeb}
           onclick={() => {
             gitMode = "local";
             repoPreview = null;
@@ -289,6 +320,7 @@
           <button
             type="button"
             class:active={gitMode === "clone"}
+            disabled={staticWeb}
             onclick={() => {
               gitMode = "clone";
               repoPreview = null;
@@ -300,96 +332,101 @@
         {/if}
       </div>
 
-      {#if gitMode === "github"}
-        <GitHubConnect
-          {bridge}
-          oauthConfigured={capabilities.gitOAuth}
-          {onOpen}
-          pickFolder={(prompt) => pickFolder("parent", prompt)}
-        />
-      {:else if gitMode === "local"}
-        <p class="hint">Choose a folder that is already a Git clone of your book.</p>
-        {#if capabilities.folderPicker}
-          <button
-            type="button"
-            class="primary"
-            disabled={busy}
-            onclick={chooseGitRepo}
-          >
-            Choose repository…
-          </button>
-        {/if}
-
-        {#if repoPreview?.isRepo}
-          <div class="repo-card">
-            <p class="repo-path">{repoPreview.path}</p>
-            {#if repoPreview.branch}
-              <p><strong>Branch</strong> {repoPreview.branch}</p>
-            {/if}
-            {#if repoPreview.remotes.length}
-              <p><strong>Remote</strong></p>
-              <ul>
-                {#each repoPreview.remotes as remote}
-                  <li><code>{remote.name}</code> {remote.url}</li>
-                {/each}
-              </ul>
-            {:else}
-              <p class="warn">No remote configured — you can still open, but Pull will not sync.</p>
-            {/if}
-            {#if repoPreview.behind}
-              <p class="warn">{repoPreview.behind} commit(s) behind remote</p>
-            {/if}
+      {#if !staticWeb}
+        {#if gitMode === "github"}
+          <GitHubConnect
+            {bridge}
+            oauthConfigured={capabilities.gitOAuth}
+            {onOpen}
+            pickFolder={(prompt) => pickFolder("parent", prompt)}
+          />
+        {:else if gitMode === "local"}
+          <p class="hint">Choose a folder that is already a Git clone of your book.</p>
+          {#if capabilities.folderPicker}
             <button
               type="button"
               class="primary"
               disabled={busy}
-              onclick={connectLocalRepo}
+              onclick={chooseGitRepo}
             >
-              Connect and open
+              Choose repository…
             </button>
-          </div>
-        {/if}
-      {:else if gitMode === "clone"}
-        <label>
-          <span>Git remote URL</span>
-          <input
-            type="url"
-            bind:value={cloneUrl}
-            placeholder="https://github.com/you/monsterosso.git"
-            disabled={busy}
-          />
-        </label>
+          {/if}
 
-        {#if cloneFolderName}
-          <p class="hint">Will clone into <code>{cloneFolderName}/</code></p>
-        {/if}
+          {#if repoPreview?.isRepo}
+            <div class="repo-card">
+              <p class="repo-path">{repoPreview.path}</p>
+              {#if repoPreview.branch}
+                <p><strong>Branch</strong> {repoPreview.branch}</p>
+              {/if}
+              {#if repoPreview.remotes.length}
+                <p><strong>Remote</strong></p>
+                <ul>
+                  {#each repoPreview.remotes as remote}
+                    <li><code>{remote.name}</code> {remote.url}</li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class="warn">No remote configured — you can still open, but Pull will not sync.</p>
+              {/if}
+              {#if repoPreview.behind}
+                <p class="warn">{repoPreview.behind} commit(s) behind remote</p>
+              {/if}
+              <button
+                type="button"
+                class="primary"
+                disabled={busy}
+                onclick={connectLocalRepo}
+              >
+                Connect and open
+              </button>
+            </div>
+          {/if}
+        {:else if gitMode === "clone"}
+          <label>
+            <span>Git remote URL</span>
+            <input
+              type="url"
+              bind:value={cloneUrl}
+              placeholder="https://github.com/you/monsterosso.git"
+              disabled={busy}
+            />
+          </label>
 
-        <label>
-          <span>Parent folder</span>
-          <input
-            type="text"
-            bind:value={parentPath}
-            placeholder="/Users/you/Writing"
-            disabled={busy}
-          />
-        </label>
+          {#if cloneFolderName}
+            <p class="hint">Will clone into <code>{cloneFolderName}/</code></p>
+          {/if}
 
-        {#if capabilities.folderPicker}
-          <button
-            type="button"
-            class="secondary"
-            disabled={busy}
-            onclick={chooseCloneParent}
-          >
-            Choose parent folder…
+          <label>
+            <span>Parent folder</span>
+            <input
+              type="text"
+              bind:value={parentPath}
+              placeholder="/Users/you/Writing"
+              disabled={busy}
+            />
+          </label>
+
+          {#if capabilities.folderPicker}
+            <button
+              type="button"
+              class="secondary"
+              disabled={busy}
+              onclick={chooseCloneParent}
+            >
+              Choose parent folder…
+            </button>
+          {/if}
+
+          <button type="button" class="primary" disabled={busy} onclick={cloneFromRemote}>
+            Clone and connect
           </button>
         {/if}
-
-        <button type="button" class="primary" disabled={busy} onclick={cloneFromRemote}>
-          Clone and connect
-        </button>
       {/if}
     {:else}
+      {#if staticWeb}
+        <p class="static-note">Creating a new book on disk requires the desktop app or local dev bridge.</p>
+      {/if}
       <label>
         <span>Book title</span>
         <input type="text" bind:value={newTitle} placeholder="Monsterosso" disabled={busy} />
@@ -416,7 +453,7 @@
           Choose parent folder…
         </button>
       {/if}
-      <button type="button" class="primary" disabled={busy} onclick={createNew}>
+      <button type="button" class="primary" disabled={busy || staticWeb} onclick={createNew}>
         Create &amp; open
       </button>
     {/if}
@@ -425,8 +462,13 @@
       <p class="error">{error}</p>
     {/if}
 
-    <div class="demo">
-      <button type="button" class="ghost" onclick={onDemo}>Try demo (in-memory)</button>
+    <div class="demo" class:prominent={staticWeb}>
+      <button type="button" class={staticWeb ? "primary" : "ghost"} onclick={onDemo}>
+        Try demo (in-memory)
+      </button>
+      {#if staticWeb && onDownload}
+        <button type="button" class="ghost" onclick={() => onDownload?.()}>Download app</button>
+      {/if}
     </div>
   </div>
 </div>
@@ -463,6 +505,38 @@
   .lede {
     color: var(--text-muted);
     line-height: 1.5;
+  }
+
+  .static-note {
+    margin: 0 0 0.85rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 6px;
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .inline-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--accent);
+    text-decoration: underline;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .git-modes.disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .demo.prominent {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .tabs,

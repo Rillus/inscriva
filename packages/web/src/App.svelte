@@ -84,6 +84,13 @@
   import ChapterMapForm from "./lib/ChapterMapForm.svelte";
   import SettingsModal from "./lib/SettingsModal.svelte";
   import WelcomeScreen from "./lib/WelcomeScreen.svelte";
+  import DownloadPage from "./lib/DownloadPage.svelte";
+  import {
+    navigateAppRoute,
+    readAppRoute,
+    type AppRoute,
+  } from "./lib/app-route.js";
+  import { detectWritingMode, type WritingMode } from "./lib/writing-mode.js";
   import AppLoadOverlay from "./lib/AppLoadOverlay.svelte";
   import {
     appendClosedWritingSession,
@@ -204,6 +211,8 @@
   let revisionChecked = $state<Partial<Record<RevisionPassId, boolean>>>({});
   let currentRevisionPass = $state<RevisionPassId>("structure");
   let welcomeTab = $state<"open" | "git" | "new">("open");
+  let appRoute = $state<AppRoute>("welcome");
+  let writingMode = $state<WritingMode>("dev-bridge");
   let loadState = $state<{ title: string; detail?: string } | null>({
     title: "Starting Inscriva",
     detail: "Connecting…",
@@ -961,10 +970,26 @@
     };
   });
 
+  function goToDownload() {
+    navigateAppRoute("download");
+    appRoute = "download";
+  }
+
+  function goToWelcome() {
+    navigateAppRoute("welcome");
+    appRoute = "welcome";
+  }
+
   onMount(() => {
     urlEditorLocation = parseEditorLocation(location.search);
     shareMode = isShareMode(location.search);
+    appRoute = readAppRoute();
     if (shareMode) mode = "read";
+
+    const onPopState = () => {
+      appRoute = readAppRoute();
+    };
+    window.addEventListener("popstate", onPopState);
 
     const onBeforeUnload = () => {
       flushViewStateSave();
@@ -980,6 +1005,7 @@
       const resolved = await resolveBridge();
       bridge = resolved.bridge;
       host = resolved.host;
+      writingMode = await detectWritingMode();
       capabilities = await loadCapabilities(resolved.bridge);
       recents = await resolved.bridge.getRecents();
 
@@ -1014,6 +1040,7 @@
     })();
 
     return () => {
+      window.removeEventListener("popstate", onPopState);
       window.removeEventListener("beforeunload", onBeforeUnload);
       clearTimeout(urlLineTimer);
       clearTimeout(restoreFallbackTimer);
@@ -1562,14 +1589,18 @@
       detail={loadState?.detail}
     />
   </div>
+{:else if !bookPath && appRoute === "download"}
+  <DownloadPage {writingMode} onBack={goToWelcome} onDemo={openDemo} />
 {:else if !bookPath}
   <WelcomeScreen
     {bridge}
     {capabilities}
     {recents}
+    {writingMode}
     bind:tab={welcomeTab}
     onOpen={handleBookOpened}
     onDemo={openDemo}
+    onDownload={goToDownload}
   />
 {:else}
   <div class="app" data-host={host}>

@@ -177,7 +177,26 @@ Optional environment variables (Project → Settings → Environment Variables):
 | `VITE_BRIDGE_URL` | Base URL of a running dev bridge if you host one separately |
 | `VITE_FIXTURE_BOOK` | Default book path on the welcome screen |
 
-A Vercel deployment is a **static UI** only: filesystem, Git, and OAuth need the [dev bridge](#quick-start-browser--dev-bridge) on your machine or the [Tauri desktop](#tauri-desktop-macos) app. Use `?demo=1` on the deployed URL for the in-browser mock book.
+A Vercel deployment is a **static UI** only: filesystem, Git, and OAuth need the [dev bridge](#quick-start-browser--dev-bridge) on your machine or the [Tauri desktop](#tauri-desktop-macos) app. The welcome screen and **`/download`** page explain this and link to macOS releases. Use `?demo=1` for the in-browser mock book.
+
+### Download page and messaging
+
+| URL | Purpose |
+|-----|---------|
+| `/` | Welcome — shows a banner on static hosts (no local bridge) |
+| `/download` | macOS download, local dev setup, demo link |
+| `/?demo=1` | In-memory demo book |
+
+Optional Vercel environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_MACOS_DOWNLOAD_URL` | Direct link to `.zip` / `.dmg` (overrides releases page) |
+| `VITE_GITHUB_RELEASES_URL` | GitHub releases URL (default: latest) |
+| `VITE_BRIDGE_URL` | Base URL of a hosted dev bridge (advanced; not typical) |
+| `VITE_FIXTURE_BOOK` | Default book path on the welcome screen |
+
+macOS builds: push a tag `v*` to trigger [.github/workflows/release-macos.yml](.github/workflows/release-macos.yml). See [docs/release-macos.md](docs/release-macos.md).
 
 ---
 
