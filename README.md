@@ -150,8 +150,8 @@ The repo includes [`vercel.json`](vercel.json). Connect [github.com/Rillus/inscr
 | **Root Directory** | *(leave empty — repository root)* |
 | Framework Preset | Other |
 | Install Command | `pnpm install --frozen-lockfile` |
-| Build Command | `pnpm --filter @inscriva/web build` |
-| Output Directory | `packages/web/dist` |
+| Build Command | `pnpm build:vercel` |
+| Output Directory | `dist` |
 
 `vercel.json` at the repo root sets these automatically **if Root Directory is empty**. If you set Root Directory to `apps/dev-bridge`, the build fails with `Command "build:web" not found` — that folder has no web build script.
 
@@ -160,6 +160,7 @@ The repo includes [`vercel.json`](vercel.json). Connect [github.com/Rillus/inscr
 | Error | Fix |
 |-------|-----|
 | `Command "build:web" not found` | Project → Settings → General → **Root Directory** → clear it (use repo root) |
+| `No Output Directory named "dist" found` | Set Output Directory to `dist`, or pull latest (build copies `packages/web/dist` → `dist`) |
 | `Ignored build scripts: esbuild` | Root `package.json` lists `esbuild` under `pnpm.onlyBuiltDependencies`; redeploy after pulling latest |
 | Blank page after deploy | Open `/?demo=1` — real books need a bridge, not Vercel alone |
 

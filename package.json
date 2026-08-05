@@ -13,10 +13,11 @@
     "dev:android": "pnpm --filter @inscriva/mobile-android dev",
     "build": "pnpm -r build",
     "build:web": "pnpm --filter @inscriva/web build",
+    "build:vercel": "pnpm --filter @inscriva/web build && node scripts/stage-vercel-dist.mjs",
     "build:desktop": "pnpm --filter @inscriva/desktop-macos build",
     "build:android": "pnpm --filter @inscriva/mobile-android build",
     "icon:render": "node scripts/render-app-icon.mjs",
-    "test": "pnpm -r test && vitest run scripts/render-app-icon.test.mjs",
+    "test": "pnpm -r test && vitest run scripts/render-app-icon.test.mjs scripts/stage-vercel-dist.test.mjs",
     "test:coverage": "pnpm -r test:coverage",
     "typecheck": "pnpm -r typecheck"
   },
