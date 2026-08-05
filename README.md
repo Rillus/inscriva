@@ -139,29 +139,35 @@ Not automated in-repo. For distribution outside your machine:
 
 ## Deploy (Vercel — web UI)
 
-Deploy the **repository root**, not `apps/dev-bridge`. The dev bridge is a local Node server for development; Vercel hosts only the static Svelte app in `packages/web`.
+Deploy the **static web UI** from `packages/web`. Do **not** point Vercel at `apps/dev-bridge` — that package is a local Node server, not the site build.
 
-The repo includes [`vercel.json`](vercel.json). Connect [github.com/Rillus/inscriva](https://github.com/Rillus/inscriva) in the Vercel dashboard (import project → GitHub → this repo).
+The repo includes `vercel.json` in three places so builds work whichever root Vercel uses:
 
-### Vercel project settings
+| Root Directory (Vercel) | Config file used |
+|-------------------------|------------------|
+| *(empty — repo root)* | `/vercel.json` |
+| `packages/web` **(recommended)** | `packages/web/vercel.json` |
+| `apps/dev-bridge` *(misconfiguration)* | `apps/dev-bridge/vercel.json` (builds web anyway) |
+
+Connect [github.com/Rillus/inscriva](https://github.com/Rillus/inscriva) in the Vercel dashboard.
+
+### Recommended Vercel project settings
 
 | Setting | Value |
 |---------|--------|
-| **Root Directory** | *(leave empty — repository root)* |
+| **Root Directory** | `packages/web` |
 | Framework Preset | Other |
-| Install Command | `pnpm install --frozen-lockfile` |
-| Build Command | `pnpm build:vercel` |
-| Output Directory | `dist` |
+| Install / Build / Output | *(from `packages/web/vercel.json` — leave overrides empty)* |
 
-`vercel.json` at the repo root sets these automatically **if Root Directory is empty**. If you set Root Directory to `apps/dev-bridge`, the build fails with `Command "build:web" not found` — that folder has no web build script.
+Alternative: leave **Root Directory empty** and use the repo-root `vercel.json` (output staged to `/dist`).
 
 ### Troubleshooting
 
 | Error | Fix |
 |-------|-----|
-| `Command "build:web" not found` | Project → Settings → General → **Root Directory** → clear it (use repo root) |
-| `No Output Directory named "dist" found` | Set Output Directory to `dist`, or pull latest (build copies `packages/web/dist` → `dist`) |
-| `Ignored build scripts: esbuild` | Root `package.json` lists `esbuild` under `pnpm.onlyBuiltDependencies`; redeploy after pulling latest |
+| `Command "build:web" not found` or `Command "build:vercel" not found` | Wrong Root Directory — set to `packages/web` or clear it (repo root) |
+| `No Output Directory named "dist" found` | Output Directory must be `dist`; redeploy after pulling latest |
+| `Ignored build scripts: esbuild` | Root `package.json` lists `esbuild` under `pnpm.onlyBuiltDependencies` |
 | Blank page after deploy | Open `/?demo=1` — real books need a bridge, not Vercel alone |
 
 Optional environment variables (Project → Settings → Environment Variables):
