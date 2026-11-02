@@ -114,7 +114,7 @@ describe("streamGoogleChat", () => {
   it("parses SSE chunks and requests alt=sse", async () => {
     const payload =
       'data: {"candidates":[{"content":{"parts":[{"text":"Gemini"}]}}]}\n\n';
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn(async (_input: RequestInfo) => ({
       ok: true,
       body: new ReadableStream({
         start(controller) {

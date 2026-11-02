@@ -19,6 +19,7 @@ describe("fetchSessionPack", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     });
     expect(md).toBe("# Pack");
   });
@@ -32,6 +33,7 @@ describe("fetchSessionPack", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     });
     expect(md).toBeNull();
   });

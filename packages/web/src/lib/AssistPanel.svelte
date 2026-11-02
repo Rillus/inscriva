@@ -53,11 +53,6 @@
     refreshOutlineMode = false,
   }: Props = $props();
 
-  const isChapterReview = $derived(taskId === "review-chapter-goals");
-  const isExpandOutline = $derived(
-    expandOutlineMode || taskId === "expand-outline",
-  );
-
   const TASKS: { id: LlmTaskId; label: string }[] = [
     { id: "draft-scene", label: "Draft scene" },
     { id: "fix-paragraph", label: "Fix paragraph" },
@@ -75,6 +70,11 @@
   const DIFF_TASKS = new Set<LlmTaskId>(["draft-scene", "fix-paragraph"]);
 
   let taskId = $state<LlmTaskId>("draft-scene");
+
+  const isChapterReview = $derived(taskId === "review-chapter-goals");
+  const isExpandOutline = $derived(
+    expandOutlineMode || taskId === "expand-outline",
+  );
 
   $effect(() => {
     if (taskIdProp) taskId = taskIdProp;

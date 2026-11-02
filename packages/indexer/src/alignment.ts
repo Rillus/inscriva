@@ -41,7 +41,6 @@ export interface AlignmentReport {
 }
 
 const SCENE_IN_OUTLINE_RE = /##\s+Scene\s+(\d+)\s*[—–-]\s*(.+)/gi;
-const SCENE_IN_DRAFT_RE = /##\s+Scene\s+(\d+)\s*[—–-]\s*(.+)/gi;
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

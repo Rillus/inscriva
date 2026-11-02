@@ -60,7 +60,7 @@ describe("createHttpBridge", () => {
       vi.fn(async () => new Response(JSON.stringify({}))),
     );
     const bridge = createHttpBridge("http://127.0.0.1:3847");
-    await expect(bridge.gitOAuthStart("gitlab" as "github")).rejects.toThrow(
+    await expect(bridge.gitOAuthStart!("gitlab" as "github")).rejects.toThrow(
       "Unsupported provider",
     );
   });
@@ -81,9 +81,11 @@ describe("createHttpBridge", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     });
 
-    await expect(stream.next()).rejects.toThrow("No API key configured for openai");
+    const iter = stream[Symbol.asyncIterator]();
+    await expect(iter.next()).rejects.toThrow("No API key configured for openai");
   });
 
   it("streams LLM tokens from SSE", async () => {
@@ -116,6 +118,7 @@ describe("createHttpBridge", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     })) {
       chunks.push(text);
     }

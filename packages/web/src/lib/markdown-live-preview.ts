@@ -341,7 +341,7 @@ export function refreshMarkdownPreview(
   options?: MarkdownPreviewParseRequest,
 ): void {
   queueMicrotask(() => {
-    if (view.isDestroyed) return;
+    if ((view as EditorView & { isDestroyed?: boolean }).isDestroyed) return;
     view.requestMeasure();
     view.dispatch({
       effects: refreshMarkdownPreviewEffect.of(options ?? {}),
@@ -446,8 +446,8 @@ export function markdownLivePreview() {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet = Decoration.none;
-      private refreshQueued = false;
-      private pendingParse: MarkdownPreviewParseRequest | undefined;
+      refreshQueued = false;
+      pendingParse: MarkdownPreviewParseRequest | undefined;
 
       constructor(readonly view: EditorView) {
         this.pendingParse = {};
@@ -464,17 +464,19 @@ export function markdownLivePreview() {
         }
       }
 
-      private scheduleRefresh() {
+      scheduleRefresh() {
         if (this.refreshQueued) return;
         this.refreshQueued = true;
         queueMicrotask(() => {
           this.refreshQueued = false;
-          if (this.view.isDestroyed) return;
+          if ((this.view as EditorView & { isDestroyed?: boolean }).isDestroyed) {
+            return;
+          }
           this.applyRefresh();
         });
       }
 
-      private applyRefresh() {
+      applyRefresh() {
         const { state } = this.view;
 
         if (state.doc.length > 0 && this.pendingParse !== undefined) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { capabilitiesFromBridge } from "./capabilities.js";
 import { createMockBridge } from "./mock-bridge.js";
+import type { InscrivaBridge } from "./types.js";
 
 describe("capabilitiesFromBridge", () => {
   it("reflects methods present on the bridge", () => {
@@ -22,7 +23,7 @@ describe("capabilitiesFromBridge", () => {
     const minimal = {
       openBook: async () => ({ id: "1", path: "/x", title: "X" }),
     };
-    expect(capabilitiesFromBridge(minimal)).toEqual({
+    expect(capabilitiesFromBridge(minimal as unknown as InscrivaBridge)).toEqual({
       folderPicker: false,
       gitClone: false,
       gitPull: false,

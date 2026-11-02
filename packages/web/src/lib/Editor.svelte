@@ -379,10 +379,10 @@
   ): CMSelection {
     if (restore && restore.caret.from <= docLength) {
       return restore.caret.from === restore.caret.to
-        ? CMSelection.cursor(restore.caret.from)
-        : CMSelection.single(restore.caret.from, restore.caret.to);
+        ? (CMSelection.cursor(restore.caret.from) as unknown as CMSelection)
+        : (CMSelection.single(restore.caret.from, restore.caret.to) as unknown as CMSelection);
     }
-    return CMSelection.cursor(0);
+    return CMSelection.cursor(0) as unknown as CMSelection;
   }
 
   $effect(() => {

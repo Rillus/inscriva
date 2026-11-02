@@ -85,6 +85,7 @@ describe("createMockBridge", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "book-1",
+      userInitiated: true,
     })) {
       chunks.push(part);
     }
@@ -93,17 +94,17 @@ describe("createMockBridge", () => {
 
   it("reports git and provider stubs", async () => {
     const bridge = createMockBridge(sampleBook());
-    expect(await bridge.gitInspect("/books/demo")).toEqual({
+    expect(await bridge.gitInspect!("/books/demo")).toEqual({
       path: "/books/demo",
       isRepo: false,
       remotes: [],
     });
-    expect(await bridge.gitOAuthStatus("github")).toEqual({
+    expect(await bridge.gitOAuthStatus!("github")).toEqual({
       connected: false,
       configured: false,
     });
     expect(await bridge.listProviders()).toHaveLength(4);
-    await expect(bridge.gitClone({ url: "x", parentPath: "y" })).rejects.toThrow(
+    await expect(bridge.gitClone!({ url: "x", parentPath: "y" })).rejects.toThrow(
       "native bridge",
     );
   });

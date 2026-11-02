@@ -13,6 +13,12 @@ export default defineConfig({
         "src/types.ts",
       ],
       reporter: ["text", "text-summary"],
+      thresholds: {
+        lines: 70,
+        branches: 81,
+        functions: 53,
+        statements: 70,
+      },
     },
   },
 });

@@ -113,7 +113,7 @@ export function deleteFileInSession(bookPath: string, filePath: string): void {
     activePath = remaining[0] ?? "";
   }
 
-  if (!activePath && remaining.length === 0) {
+  if (!activePath && Object.keys(files).length === 0) {
     const sessions = readAllSessions();
     delete sessions[bookPath];
     writeAllSessions(sessions);
