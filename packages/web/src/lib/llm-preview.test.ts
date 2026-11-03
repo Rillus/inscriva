@@ -21,6 +21,7 @@ describe("fetchLlmPreview", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     });
     expect(ctx?.user).toBe("user");
   });
@@ -32,6 +33,7 @@ describe("fetchLlmPreview", () => {
       provider: "openai",
       model: "gpt-4o-mini",
       bookId: "b",
+      userInitiated: true,
     });
     expect(ctx).toBeNull();
   });

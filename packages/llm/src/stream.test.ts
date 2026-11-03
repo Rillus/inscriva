@@ -10,6 +10,7 @@ describe("previewContext", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "b",
+        userInitiated: true,
       },
       files,
     );
@@ -48,6 +49,7 @@ describe("runLlmStream", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "b",
+        userInitiated: true,
       },
       files,
       "sk-test",

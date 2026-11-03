@@ -3,7 +3,6 @@
   import type { Host, InscrivaBridge, LlmTaskId } from "@inscriva/bridge";
   import {
     anchorSidecarPath,
-    appendNote,
     buildBookTree,
     buildMovedPath,
     buildNewFilePath,
@@ -43,7 +42,6 @@
     type BookIndex,
     type CanonIndex,
     type CastCharacter,
-    type CastIndex,
     type ChapterMapOverrides,
     type ChapterPair,
     type GoalChecksByChapter,
@@ -900,7 +898,8 @@
   }
   const assistWritingContext = $derived.by(() => {
     if (expandOutlineEntry) {
-      const pair = chapterPairs.find((p) => p.key === expandOutlineEntry.key);
+      const entryKey = expandOutlineEntry.key;
+      const pair = chapterPairs.find((p) => p.key === entryKey);
       const existing = pair?.outline
         ? outlineContentsCache[pair.outline]
         : undefined;
@@ -1785,7 +1784,7 @@
             onJump={jumpToScene}
           />
         {/if}
-        {#if workspaceTab === "draft" && sceneSuggestions.length && activePair?.draft === activePath}
+        {#if workspaceTab === "draft" && sceneSuggestions.length && activePair?.draft === activePath && activePair}
           <SceneLedgerPanel
             chapterKey={activePair.key}
             suggestions={sceneSuggestions}

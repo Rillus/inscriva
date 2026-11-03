@@ -4,8 +4,6 @@
   import { isChapterWorkflowComplete } from "@inscriva/indexer";
   import { resolveRecommendationAction } from "./recommendation-guidance.js";
 
-  const workflowComplete = $derived(isChapterWorkflowComplete(outlineStatus));
-
   interface Props {
     report: AlignmentReport | null;
     outlineStatus?: string;
@@ -25,6 +23,8 @@
     onDismissRecommendation,
     onRunAssist,
   }: Props = $props();
+
+  const workflowComplete = $derived(isChapterWorkflowComplete(outlineStatus));
 
   function handleRun(rec: Recommendation) {
     const action = resolveRecommendationAction(rec);

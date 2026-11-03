@@ -14,8 +14,9 @@
   let status = $state<GitHostStatus>({ connected: false, configured: false });
 
   $effect(() => {
+    if (status.connected) return;
     if (status.configured !== oauthConfigured) {
-      status = { ...status, configured: oauthConfigured };
+      status = { connected: false, configured: oauthConfigured };
     }
   });
   let repos = $state<GitRemoteRepo[]>([]);

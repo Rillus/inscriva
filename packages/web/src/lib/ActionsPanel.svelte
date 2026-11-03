@@ -152,11 +152,6 @@
       : "",
   );
 
-  const inputTokens = $derived(contextPreview?.estimatedTokens ?? null);
-
-  const totalTokens = $derived(
-    inputTokens !== null ? inputTokens + maxOutputTokens : null,
-  );
   let running = $state(false);
   let error = $state<InterpretedLlmError | null>(null);
   let errorEl = $state<HTMLDivElement | null>(null);
@@ -164,6 +159,12 @@
   let contextPreview = $state<AssembledContext | null>(null);
   let contextPreviewLoading = $state(false);
   let contextPreviewError = $state<string | null>(null);
+
+  const inputTokens = $derived(contextPreview?.estimatedTokens ?? null);
+
+  const totalTokens = $derived(
+    inputTokens !== null ? inputTokens + maxOutputTokens : null,
+  );
 
   $effect(() => {
     anchorKey;

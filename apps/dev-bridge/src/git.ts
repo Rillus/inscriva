@@ -1,5 +1,5 @@
 import path from "node:path";
-import simpleGit, { type SimpleGit } from "simple-git";
+import { simpleGit, type SimpleGit } from "simple-git";
 import type { GitRepoInfo } from "@inscriva/bridge";
 
 export interface PullResult {
@@ -17,7 +17,7 @@ export async function inspectBookRepo(repoPath: string): Promise<GitRepoInfo> {
   }
 
   const status = await git.status();
-  const remotes = (await git.getRemotes(true)).map((r) => ({
+  const remotes = (await git.getRemotes(true)).map((r: { name: string; refs: { fetch?: string; push?: string } }) => ({
     name: r.name,
     url: r.refs.fetch ?? r.refs.push ?? "",
   }));

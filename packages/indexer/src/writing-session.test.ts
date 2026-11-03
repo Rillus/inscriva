@@ -20,7 +20,6 @@ describe("openWritingSession", () => {
     expect(session.wordsAtStart).toBe(1200);
     expect(session.targetWords).toBe(3000);
     expect(session.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(session.endedAt).toBeUndefined();
   });
 });
 

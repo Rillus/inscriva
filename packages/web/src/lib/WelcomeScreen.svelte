@@ -77,7 +77,7 @@
   }
 
   async function pickFolder(
-    target: "open" | "parent" | "new",
+    _target: "open" | "parent" | "new",
     prompt: string,
   ) {
     if (!bridge.pickBookFolder) {

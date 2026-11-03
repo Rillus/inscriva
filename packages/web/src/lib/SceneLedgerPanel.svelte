@@ -16,7 +16,7 @@
   }: Props = $props();
 </script>
 
-<section class="scene-ledger" aria-label="Scene ledger suggestions">
+<section class="scene-ledger" aria-label="Scene ledger suggestions for {chapterKey}">
   <header>
     <h3>Scene ledger</h3>
     <p class="hint">

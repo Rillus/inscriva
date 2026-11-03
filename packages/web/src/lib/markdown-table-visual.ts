@@ -169,7 +169,7 @@ class PipeTableWidget extends WidgetType {
       table.appendChild(tbody);
       root.appendChild(table);
 
-      let debounce: ReturnType<typeof window.setTimeout> | undefined;
+      let debounce: number | undefined;
       const sync = () => {
         if (!editable) return;
         const next = tableDomToParsed(root);

@@ -3,7 +3,7 @@ import { inspectBookRepo, pullBookRepo } from "./git.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import simpleGit from "simple-git";
+import { simpleGit } from "simple-git";
 
 describe("pullBookRepo", () => {
   it("skips when not a git repository", async () => {

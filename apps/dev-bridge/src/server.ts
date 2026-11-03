@@ -4,9 +4,9 @@ import path from "node:path";
 import { repoNameFromUrl, type LlmRequest } from "@inscriva/bridge";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
-import chokidar from "chokidar";
+import chokidar, { type FSWatcher } from "chokidar";
 import Fastify from "fastify";
-import simpleGit from "simple-git";
+import { simpleGit } from "simple-git";
 import { ensureNotesFile, readBookFileContent } from "./book-files.js";
 import { BROWSER_CORS_METHODS, corsHeadersForOrigin } from "./cors-config.js";
 import { cloneBookRepo, inspectBookRepo, pullBookRepo } from "./git.js";
@@ -51,7 +51,7 @@ const KEYS_PATH = path.join(
 );
 
 let bookRoot: string | null = null;
-let watcher: chokidar.FSWatcher | null = null;
+let watcher: FSWatcher | null = null;
 const wsClients = new Set<{ send: (data: string) => void }>();
 
 const app = Fastify({ logger: false });
@@ -392,8 +392,9 @@ interface NewBookBody {
   initGit?: boolean;
 }
 
-function requireBook(): asserts bookRoot is string {
+function requireBook(): string {
   if (!bookRoot) throw new Error("No book open");
+  return bookRoot;
 }
 
 function safePath(root: string, rel: string): string {
@@ -507,7 +508,7 @@ async function startWatcher(root: string): Promise<void> {
     ignoreInitial: true,
   });
 
-  watcher.on("all", (event, filePath) => {
+  watcher.on("all", (event: string, filePath: string) => {
     const rel = path.relative(root, filePath).split(path.sep).join("/");
     const kind =
       event === "add" ? "created" : event === "unlink" ? "deleted" : "modified";

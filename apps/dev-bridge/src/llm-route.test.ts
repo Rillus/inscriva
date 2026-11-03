@@ -21,8 +21,7 @@ describe("assertUserInitiated", () => {
         provider: "openai",
         model: "gpt-4o-mini",
         bookId: "b",
-        userInitiated: true as const,
-        userInitiated: false as unknown as true,
+        userInitiated: false as true,
       }),
     ).toThrow(/userInitiated/);
   });
