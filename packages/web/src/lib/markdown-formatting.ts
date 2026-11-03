@@ -23,7 +23,7 @@ export function wordBoundsInDoc(
   doc: string,
   pos: number,
 ): { from: number; to: number } {
-  const re = /[A-Za-z0-9][A-Za-z0-9'\-]*/g;
+  const re = /[A-Za-z0-9][A-Za-z0-9'-]*/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(doc))) {
     const from = match.index;
