@@ -12,7 +12,7 @@ export function isPlaceholderChapterTitle(title: string): boolean {
 export function stripChapterPrefixFromH1(h1Body: string): string {
   return h1Body
     .trim()
-    .replace(/^Ch\d+\s*[—:–\-]\s*/i, "")
+    .replace(/^Ch\d+\s*[—:–-]\s*/i, "")
     .replace(/^Ch\d+\s*:\s*/i, "")
     .trim();
 }

@@ -142,10 +142,10 @@ export function applyExpandedChapterOutline(
       ? existing
       : buildChapterOutlineSkeleton(entry);
 
-  const scenesBlock = trimmed.match(/^##\s+Scenes[\s\S]*?(?=^##\s|\Z)/im);
+  const scenesBlock = trimmed.match(/^##\s+Scenes[\s\S]*?(?=^##\s|Z)/im);
   if (scenesBlock) {
     return base.replace(
-      /^##\s+Scenes[\s\S]*?(?=^##\s|\Z)/im,
+      /^##\s+Scenes[\s\S]*?(?=^##\s|Z)/im,
       scenesBlock[0]!.trimEnd() + "\n\n",
     );
   }
