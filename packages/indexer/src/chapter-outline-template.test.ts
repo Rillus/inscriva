@@ -48,4 +48,31 @@ describe("applyExpandedChapterOutline", () => {
     expect(next).toContain("Extra beat");
     expect(next).toContain("## Story question");
   });
+
+  it("keeps full Scenes text when beats contain z and Z before the next section", () => {
+    const stub = buildChapterOutlineSkeleton(ENTRY);
+    const expanded = `## Scenes
+- Zoe grabs pizza at noon
+- A size-Z crate in the zone
+
+## Word target
+3200`;
+    const next = applyExpandedChapterOutline(stub, expanded, ENTRY);
+    expect(next).toContain("- Zoe grabs pizza at noon");
+    expect(next).toContain("- A size-Z crate in the zone");
+    expect(next).not.toContain("- Breakfast");
+    expect(next).toContain("## Word target\n2400");
+  });
+
+  it("keeps full Scenes text when beats contain z and Z at end of document", () => {
+    const stub = buildChapterOutlineSkeleton(ENTRY);
+    const expanded = `## Scenes
+- Zoe grabs pizza at noon
+- A size-Z crate in the zone`;
+    const next = applyExpandedChapterOutline(stub, expanded, ENTRY);
+    expect(next).toContain("- Zoe grabs pizza at noon");
+    expect(next).toContain("- A size-Z crate in the zone");
+    expect(next).not.toContain("- Breakfast");
+    expect(next).toContain("## Word target\n2400");
+  });
 });
