@@ -27,13 +27,17 @@
     "@tauri-apps/plugin-dialog": "^2.2.0"
   },
   "peerDependenciesMeta": {
-    "@tauri-apps/api": { "optional": true },
-    "@tauri-apps/plugin-dialog": { "optional": true }
+    "@tauri-apps/api": {
+      "optional": true
+    },
+    "@tauri-apps/plugin-dialog": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.4.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.4"
+    "vitest": "^3.2.7"
   }
 }
