@@ -10,11 +10,13 @@
     "dev:bridge:stop": "pnpm --filter @inscriva/dev-bridge stop",
     "dev:all": "pnpm --parallel --filter @inscriva/web --filter @inscriva/dev-bridge dev",
     "dev:desktop": "pnpm --filter @inscriva/desktop-macos dev",
+    "dev:electron": "pnpm --filter @inscriva/desktop-macos dev:electron",
     "dev:android": "pnpm --filter @inscriva/mobile-android dev",
     "build": "pnpm -r build",
     "build:web": "pnpm --filter @inscriva/web build",
     "build:vercel": "pnpm --filter @inscriva/web build && node scripts/stage-vercel-dist.mjs",
     "build:desktop": "pnpm --filter @inscriva/desktop-macos build",
+    "build:electron": "pnpm --filter @inscriva/desktop-macos build:electron",
     "build:android": "pnpm --filter @inscriva/mobile-android build",
     "icon:render": "node scripts/render-app-icon.mjs",
     "test": "pnpm -r test && vitest run scripts/render-app-icon.test.mjs scripts/stage-vercel-dist.test.mjs",
@@ -28,7 +30,8 @@
   "packageManager": "pnpm@10.9.0",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "electron"
     ],
     "overrides": {
       "tinypool": ">=2.1.2",
