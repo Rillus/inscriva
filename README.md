@@ -10,7 +10,7 @@ Monorepo layout:
 | `packages/indexer` | Anchors, canon index, chapter pairing |
 | `packages/bridge` | Shared `InscrivaBridge` types + HTTP / mock / Tauri clients |
 | `apps/dev-bridge` | Node bridge for browser dev (`pnpm dev:bridge`) |
-| `apps/desktop-macos` | Tauri 2 native shell (macOS today; same web `dist/` for future targets) |
+| `apps/desktop-macos` | Native macOS shells: Tauri 2 (default) + Electron slice in progress (same web `dist/`) |
 
 Requirements: **Node 20+**, **pnpm 10+**. Native desktop builds also need **Rust** ([rustup](https://rustup.rs/)).
 
@@ -66,6 +66,8 @@ Dev bridge env (`apps/dev-bridge/.env`):
 ## Tauri desktop (macOS)
 
 The desktop app embeds the same web build and talks to the OS via Rust commands (no separate dev bridge process).
+
+An **Electron** shell is also landing under `apps/desktop-macos/electron/` (`pnpm dev:electron`). It wraps the same web UI only — no native bridge port yet; Tauri remains the capability-bearing shell until that work lands. See [`apps/desktop-macos/README.md`](apps/desktop-macos/README.md).
 
 ### Prerequisites
 
@@ -129,9 +131,11 @@ Not automated in-repo. For distribution outside your machine:
 | `pnpm dev:bridge` | Dev bridge only |
 | `pnpm dev:all` | Web + dev bridge in parallel |
 | `pnpm dev:desktop` | Tauri dev (macOS shell) |
+| `pnpm dev:electron` | Electron shell (Vite URL; start `pnpm --filter @inscriva/web dev` separately) |
 | `pnpm build` | Build all workspace packages |
 | `pnpm build:web` | Production static build (`packages/web/dist`) |
 | `pnpm build:desktop` | Web production build + Tauri bundle |
+| `pnpm build:electron` | Web production build + Electron window against `dist/` (unsigned) |
 | `pnpm test` | Run Vitest across packages |
 | `pnpm typecheck` | TypeScript check all packages |
 
