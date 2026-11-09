@@ -14,6 +14,10 @@
     "./tauri-bridge": {
       "types": "./src/tauri-bridge.ts",
       "import": "./src/tauri-bridge.ts"
+    },
+    "./electron-bridge": {
+      "types": "./src/electron-bridge.ts",
+      "import": "./src/electron-bridge.ts"
     }
   },
   "scripts": {

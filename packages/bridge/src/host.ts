@@ -1,8 +1,11 @@
 import type { Host, InscrivaBridge } from "./types.js";
 
+import type { InscrivaElectronApi } from "./electron-bridge.js";
+
 declare global {
   interface Window {
     inscrivaBridge?: InscrivaBridge;
+    inscrivaElectron?: InscrivaElectronApi;
   }
 }
 

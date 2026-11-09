@@ -47,6 +47,13 @@ export async function resolveBridge(options?: {
     return finish(window.inscrivaBridge, "bridge");
   }
 
+  if (typeof window !== "undefined" && window.inscrivaElectron) {
+    const { createElectronBridge } = await import(
+      "@inscriva/bridge/electron-bridge"
+    );
+    return finish(createElectronBridge(window.inscrivaElectron), "bridge");
+  }
+
   const tauri = await tryTauriBridge();
   if (tauri) {
     return finish(tauri, "bridge");
