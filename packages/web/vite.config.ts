@@ -30,6 +30,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@inscriva/bridge/tauri-bridge": tauriBridgeEntry,
+      "@inscriva/bridge/electron-bridge": path.resolve(
+        __dirname,
+        "../bridge/src/electron-bridge.ts",
+      ),
       "@inscriva/bridge": path.resolve(__dirname, "../bridge/src/index.ts"),
       "@inscriva/indexer": path.resolve(__dirname, "../indexer/src/index.ts"),
     },

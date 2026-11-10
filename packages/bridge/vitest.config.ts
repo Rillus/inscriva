@@ -10,6 +10,7 @@ export default defineConfig({
         "src/**/*.test.ts",
         "src/**/index.ts",
         "src/tauri-bridge.ts",
+        "src/electron-bridge.ts",
         "src/types.ts",
       ],
       reporter: ["text", "text-summary"],

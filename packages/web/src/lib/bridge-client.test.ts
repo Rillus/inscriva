@@ -11,8 +11,36 @@ describe("bridge-client", () => {
   afterEach(() => {
     if (typeof window !== "undefined") {
       delete window.inscrivaBridge;
+      delete window.inscrivaElectron;
     }
     vi.unstubAllGlobals();
+  });
+
+  it("uses the Electron preload API when present", async () => {
+    const listFiles = vi.fn(async () => ["electron.md"]);
+    window.inscrivaElectron = {
+      platform: "electron",
+      book: {
+        openBook: vi.fn(),
+        listFiles,
+        readFile: vi.fn(),
+        writeFile: vi.fn(),
+        renameFile: vi.fn(),
+        deleteFile: vi.fn(),
+        getRecents: vi.fn(async () => []),
+        addRecent: vi.fn(),
+        getBooksLibraryPath: vi.fn(async () => "/lib"),
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("should not fetch");
+      }),
+    );
+    const { bridge } = await resolveBridge();
+    expect(await bridge.listFiles()).toEqual(["electron.md"]);
+    expect(listFiles).toHaveBeenCalled();
   });
 
   it("uses an already-installed bridge", async () => {

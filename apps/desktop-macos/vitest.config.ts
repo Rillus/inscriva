@@ -6,7 +6,7 @@ export default defineConfig({
     include: ["electron/**/*.test.mjs"],
     coverage: {
       provider: "v8",
-      include: ["electron/load-url.mjs"],
+      include: ["electron/load-url.mjs", "electron/book-fs.mjs"],
       reporter: ["text", "text-summary"],
       thresholds: {
         lines: 90,

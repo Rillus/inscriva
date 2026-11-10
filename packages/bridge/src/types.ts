@@ -1,6 +1,11 @@
 export type Host = "bridge" | "browser";
 
-export type BridgePlatform = "macos" | "android" | "dev-bridge" | "browser";
+export type BridgePlatform =
+  | "macos"
+  | "android"
+  | "dev-bridge"
+  | "browser"
+  | "electron";
 
 export type GitHostProvider = "github";
 
