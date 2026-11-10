@@ -21,6 +21,7 @@ function mockApi(): InscrivaElectronApi {
       getRecents: vi.fn(async () => ["/recent"]),
       addRecent: vi.fn(async () => {}),
       getBooksLibraryPath: vi.fn(async () => "/library"),
+      pickBookFolder: vi.fn(async () => "/picked"),
     },
   };
 }
@@ -36,10 +37,21 @@ describe("createElectronBridge", () => {
     expect(api.book.writeFile).toHaveBeenCalledWith("a.md", "x");
   });
 
-  it("reports electron capabilities with git and folder picker disabled", async () => {
+  it("delegates pickBookFolder to the preload API", async () => {
+    const api = mockApi();
+    const bridge = createElectronBridge(api);
+    await expect(
+      bridge.pickBookFolder?.({ prompt: "Open book folder" }),
+    ).resolves.toBe("/picked");
+    expect(api.book.pickBookFolder).toHaveBeenCalledWith({
+      prompt: "Open book folder",
+    });
+  });
+
+  it("reports electron capabilities with folder picker enabled", async () => {
     const bridge = createElectronBridge(mockApi());
     await expect(bridge.getCapabilities?.()).resolves.toEqual({
-      folderPicker: false,
+      folderPicker: true,
       gitClone: false,
       gitPull: false,
       gitInspect: false,

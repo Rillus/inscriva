@@ -106,9 +106,25 @@ function collectFiles(dir, root, out) {
 }
 
 /**
+ * @param {string} child
+ * @param {string} root
+ */
+export function isPathUnderRoot(child, root) {
+  const rootResolved = path.resolve(root);
+  const full = path.resolve(child);
+  const prefix = rootResolved.endsWith(path.sep)
+    ? rootResolved
+    : `${rootResolved}${path.sep}`;
+  return full === rootResolved || full.startsWith(prefix);
+}
+
+/** @typedef {{ prompt?: string }} PickFolderOptions */
+
+/**
  * @param {{
  *   recentsPath?: string;
  *   libraryDir?: string;
+ *   pickFolderDialog?: (options?: PickFolderOptions) => Promise<string | null>;
  * }} [options]
  */
 export function createBookFs(options = {}) {
@@ -120,6 +136,9 @@ export function createBookFs(options = {}) {
   const libraryDir =
     options.libraryDir ??
     path.join(os.homedir(), "Documents", "Inscriva");
+  const pickFolderDialog = options.pickFolderDialog;
+  /** @type {Set<string>} */
+  const pickerApproved = new Set();
 
   function requireRoot() {
     if (!root) throw new Error("No book open");
@@ -145,9 +164,37 @@ export function createBookFs(options = {}) {
     fs.writeFileSync(recentsPath, `${JSON.stringify(capped, null, 2)}\n`);
   }
 
+  function isApprovedBookRoot(resolved) {
+    if (pickerApproved.has(resolved)) return true;
+    if (
+      loadRecents().some(
+        (recent) => path.resolve(recent) === resolved,
+      )
+    ) {
+      return true;
+    }
+    return isPathUnderRoot(resolved, libraryDir);
+  }
+
   return {
+    async pickBookFolder(pickOptions = {}) {
+      if (!pickFolderDialog) {
+        throw new Error("Folder picker unavailable");
+      }
+      const chosen = await pickFolderDialog(pickOptions);
+      if (!chosen) return null;
+      const resolved = path.resolve(chosen);
+      pickerApproved.add(resolved);
+      return resolved;
+    },
+
     openBook(bookPath) {
       const resolved = path.resolve(bookPath);
+      if (!isApprovedBookRoot(resolved)) {
+        throw new Error(
+          "Book path is not approved; pick a folder or open a recent book",
+        );
+      }
       if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
         throw new Error(`Not a directory: ${bookPath}`);
       }
@@ -228,6 +275,11 @@ export function createBookFs(options = {}) {
     },
 
     addRecent(bookPath) {
+      if (!isApprovedBookRoot(path.resolve(bookPath))) {
+        throw new Error(
+          "Book path is not approved; pick a folder or open a recent book",
+        );
+      }
       const recents = loadRecents().filter((p) => p !== bookPath);
       recents.unshift(bookPath);
       saveRecents(recents);

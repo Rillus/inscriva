@@ -30,6 +30,7 @@ describe("bridge-client", () => {
         getRecents: vi.fn(async () => []),
         addRecent: vi.fn(),
         getBooksLibraryPath: vi.fn(async () => "/lib"),
+        pickBookFolder: vi.fn(async () => null),
       },
     };
     vi.stubGlobal(
