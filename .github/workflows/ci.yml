@@ -36,3 +36,9 @@ jobs:
 
       - name: Coverage
         run: pnpm test:coverage
+
+      - name: Build web (Vercel output)
+        run: pnpm build:vercel
+
+      - name: Check Vercel output
+        run: test -f dist/index.html
