@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBookFs } from "./book-fs.mjs";
@@ -8,7 +8,18 @@ import {
   resolveLoadURL,
 } from "./load-url.mjs";
 
-const bookFs = createBookFs();
+const bookFs = createBookFs({
+  pickFolderDialog: async (options) => {
+    const win =
+      BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      properties: ["openDirectory", "createDirectory"],
+      title: options?.prompt ?? "Select your book folder",
+    });
+    if (canceled || !filePaths[0]) return null;
+    return filePaths[0];
+  },
+});
 
 function registerBookIpc() {
   ipcMain.handle("inscriva:book:openBook", (_event, bookPath) =>
@@ -33,6 +44,9 @@ function registerBookIpc() {
   );
   ipcMain.handle("inscriva:book:getBooksLibraryPath", () =>
     bookFs.getBooksLibraryPath(),
+  );
+  ipcMain.handle("inscriva:book:pickBookFolder", (_event, options) =>
+    bookFs.pickBookFolder(options),
   );
 }
 

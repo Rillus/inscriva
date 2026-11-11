@@ -29,6 +29,7 @@ export interface ElectronBookApi {
   getRecents(): Promise<string[]>;
   addRecent(path: string): Promise<void>;
   getBooksLibraryPath(): Promise<string>;
+  pickBookFolder(options?: PickFolderOptions): Promise<string | null>;
 }
 
 export interface InscrivaElectronApi {
@@ -47,7 +48,7 @@ export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
   return {
     async getCapabilities(): Promise<BridgeCapabilities> {
       return {
-        folderPicker: false,
+        folderPicker: true,
         gitClone: false,
         gitPull: false,
         gitInspect: false,
@@ -116,8 +117,8 @@ export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
       unavailable();
     },
 
-    async pickBookFolder(_options?: PickFolderOptions): Promise<string | null> {
-      unavailable();
+    async pickBookFolder(options?: PickFolderOptions): Promise<string | null> {
+      return book.pickBookFolder(options);
     },
 
     async gitOAuthStart(_provider: GitHostProvider): Promise<GitOAuthStart> {

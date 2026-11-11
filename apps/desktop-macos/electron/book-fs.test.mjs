@@ -2,7 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createBookFs, RECENTS_CAP } from "./book-fs.mjs";
+import {
+  createBookFs,
+  isPathUnderRoot,
+  RECENTS_CAP,
+} from "./book-fs.mjs";
 
 describe("book-fs", () => {
   /** @type {string} */
@@ -23,7 +27,7 @@ describe("book-fs", () => {
   });
 
   function makeBookDir(name = "My Book") {
-    const bookRoot = path.join(tmp, name);
+    const bookRoot = path.join(tmp, "library", name);
     fs.mkdirSync(path.join(bookRoot, ".inscriva", "notes"), { recursive: true });
     fs.writeFileSync(
       path.join(bookRoot, ".inscriva", "config.json"),
@@ -87,7 +91,7 @@ describe("book-fs", () => {
 
   it("dedupes recents and caps length", () => {
     const paths = Array.from({ length: RECENTS_CAP + 3 }, (_, i) =>
-      path.join(tmp, `book-${i}`),
+      path.join(tmp, "library", `book-${i}`),
     );
     for (const p of paths) {
       bookFs.addRecent(p);
@@ -107,14 +111,15 @@ describe("book-fs", () => {
   });
 
   it("falls back to folder name when config is missing", () => {
-    const bookRoot = path.join(tmp, "Plain Folder");
+    const bookRoot = path.join(tmp, "library", "Plain Folder");
     fs.mkdirSync(bookRoot, { recursive: true });
     const handle = bookFs.openBook(bookRoot);
     expect(handle.title).toBe("Plain Folder");
   });
 
   it("rejects opening a non-directory", () => {
-    const file = path.join(tmp, "not-a-book.txt");
+    bookFs.getBooksLibraryPath();
+    const file = path.join(tmp, "library", "not-a-book.txt");
     fs.writeFileSync(file, "nope");
     expect(() => bookFs.openBook(file)).toThrow(/Not a directory/);
   });
@@ -159,5 +164,65 @@ describe("book-fs", () => {
     const bookRoot = makeBookDir();
     bookFs.openBook(bookRoot);
     expect(() => bookFs.deleteFile("missing.md")).toThrow(/not found/i);
+  });
+
+  it("rejects unapproved book paths", () => {
+    const outside = path.join(tmp, "outside-book");
+    fs.mkdirSync(outside, { recursive: true });
+    expect(() => bookFs.openBook(outside)).toThrow(/not approved/);
+  });
+
+  it("allows opening a recent outside the library", () => {
+    const outside = path.join(tmp, "recent-book");
+    fs.mkdirSync(outside, { recursive: true });
+    fs.writeFileSync(recentsPath, JSON.stringify([outside]));
+    const handle = bookFs.openBook(outside);
+    expect(handle.path).toBe(outside);
+  });
+
+  it("rejects adding an unapproved path to recents", () => {
+    const outside = path.join(tmp, "sneaky-book");
+    fs.mkdirSync(outside, { recursive: true });
+    expect(() => bookFs.addRecent(outside)).toThrow(/not approved/);
+    expect(bookFs.getRecents()).not.toContain(outside);
+    expect(() => bookFs.openBook(outside)).toThrow(/not approved/);
+  });
+
+  it("pickBookFolder approves the chosen path for openBook", async () => {
+    const chosen = path.join(tmp, "picked-book");
+    fs.mkdirSync(chosen, { recursive: true });
+    const fsWithPicker = createBookFs({
+      recentsPath,
+      libraryDir: path.join(tmp, "library"),
+      pickFolderDialog: async () => chosen,
+    });
+    await expect(fsWithPicker.pickBookFolder({ prompt: "Pick" })).resolves.toBe(
+      chosen,
+    );
+    const handle = fsWithPicker.openBook(chosen);
+    expect(handle.path).toBe(chosen);
+  });
+
+  it("pickBookFolder returns null when the dialog is cancelled", async () => {
+    const fsWithPicker = createBookFs({
+      recentsPath,
+      libraryDir: path.join(tmp, "library"),
+      pickFolderDialog: async () => null,
+    });
+    await expect(fsWithPicker.pickBookFolder()).resolves.toBeNull();
+  });
+
+  it("does not treat library prefix lookalikes as inside the library", () => {
+    const library = path.join(tmp, "books");
+    const evil = `${library}-evil`;
+    expect(isPathUnderRoot(path.join(evil, "x"), library)).toBe(false);
+    expect(isPathUnderRoot(path.join(library, "x"), library)).toBe(true);
+    const evilBook = path.join(evil, "stolen");
+    fs.mkdirSync(evilBook, { recursive: true });
+    const fsWithLib = createBookFs({
+      recentsPath,
+      libraryDir: library,
+    });
+    expect(() => fsWithLib.openBook(evilBook)).toThrow(/not approved/);
   });
 });

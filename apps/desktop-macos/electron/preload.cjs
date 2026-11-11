@@ -15,6 +15,8 @@ const book = {
   addRecent: (path) => ipcRenderer.invoke("inscriva:book:addRecent", path),
   getBooksLibraryPath: () =>
     ipcRenderer.invoke("inscriva:book:getBooksLibraryPath"),
+  pickBookFolder: (options) =>
+    ipcRenderer.invoke("inscriva:book:pickBookFolder", options),
 };
 
 contextBridge.exposeInMainWorld("inscrivaElectron", {
