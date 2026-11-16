@@ -13,7 +13,7 @@ Rust (`rustup`) is required. GitHub OAuth env vars: `apps/dev-bridge/.env` or `s
 
 ## Electron (in progress)
 
-Thin Electron shell under `electron/` that loads the same `packages/web` build. Dev hits Vite at `http://localhost:5173`; packaged/prod loads `packages/web/dist`. Context isolation on; no Node in the renderer. Bridge port (git/keychain/llm) and signing/notarization are **not** in this slice — use the browser + `pnpm dev:bridge`, or keep using Tauri for native capabilities.
+Thin Electron shell under `electron/` that loads the same `packages/web` build. Dev hits Vite at `http://localhost:5173`; packaged/prod loads `packages/web/dist`. Context isolation on; no Node in the renderer. LLM API keys are stored in `userData/llm-keys.json` via Electron `safeStorage` (same provider list as dev-bridge). Git OAuth/clone and LLM streaming are **not** available in this shell yet; signing/notarization are also out of scope — use the browser + `pnpm dev:bridge`, or keep using Tauri for full native capabilities.
 
 ```bash
 pnpm --filter @inscriva/web dev   # terminal 1

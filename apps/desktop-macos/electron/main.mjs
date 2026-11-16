@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBookFs } from "./book-fs.mjs";
+import { createLlmKeyStore } from "./llm-keys.mjs";
 import {
   browserWindowOptions,
   isDevMode,
@@ -20,6 +21,27 @@ const bookFs = createBookFs({
     return filePaths[0];
   },
 });
+
+/** @type {ReturnType<typeof createLlmKeyStore> | null} */
+let llmKeyStore = null;
+
+function getLlmKeyStore() {
+  if (!llmKeyStore) {
+    const keysPath = path.join(app.getPath("userData"), "llm-keys.json");
+    llmKeyStore = createLlmKeyStore({ safeStorage, keysPath });
+  }
+  return llmKeyStore;
+}
+
+function registerKeysIpc() {
+  ipcMain.handle("inscriva:keys:set", (_event, { provider, key }) => {
+    getLlmKeyStore().setKey(provider, key);
+  });
+  ipcMain.handle("inscriva:keys:clear", (_event, provider) => {
+    getLlmKeyStore().clearKey(provider);
+  });
+  ipcMain.handle("inscriva:keys:list", () => getLlmKeyStore().listProviders());
+}
 
 function registerBookIpc() {
   ipcMain.handle("inscriva:book:openBook", (_event, bookPath) =>
@@ -66,6 +88,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   registerBookIpc();
+  registerKeysIpc();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -19,6 +19,12 @@ import type {
 
 const NOT_AVAILABLE = "Not available in the Electron shell yet";
 
+export interface ElectronKeysApi {
+  setApiKey(provider: string, key: string): Promise<void>;
+  clearApiKey(provider: string): Promise<void>;
+  listProviders(): Promise<ProviderStatus[]>;
+}
+
 export interface ElectronBookApi {
   openBook(path: string): Promise<BookHandle>;
   listFiles(): Promise<string[]>;
@@ -35,6 +41,7 @@ export interface ElectronBookApi {
 export interface InscrivaElectronApi {
   platform: "electron";
   book: ElectronBookApi;
+  keys?: ElectronKeysApi;
 }
 
 function unavailable(): never {
@@ -43,7 +50,7 @@ function unavailable(): never {
 
 /** Electron preload book IPC wrapped as an InscrivaBridge (partial native surface). */
 export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
-  const { book } = api;
+  const { book, keys } = api;
 
   return {
     async getCapabilities(): Promise<BridgeCapabilities> {
@@ -149,15 +156,26 @@ export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
       unavailable();
     },
 
-    async setApiKey(_provider: string, _key: string): Promise<void> {
+    async setApiKey(provider: string, key: string): Promise<void> {
+      if (keys) {
+        await keys.setApiKey(provider, key);
+        return;
+      }
       unavailable();
     },
 
-    async clearApiKey(_provider: string): Promise<void> {
+    async clearApiKey(provider: string): Promise<void> {
+      if (keys) {
+        await keys.clearApiKey(provider);
+        return;
+      }
       unavailable();
     },
 
     async listProviders(): Promise<ProviderStatus[]> {
+      if (keys) {
+        return keys.listProviders();
+      }
       return [];
     },
 

@@ -60,12 +60,46 @@ describe("createElectronBridge", () => {
     });
   });
 
-  it("returns empty providers and no-op watch", async () => {
+  it("returns empty providers and no-op watch when keys api is absent", async () => {
     const bridge = createElectronBridge(mockApi());
     expect(await bridge.listProviders()).toEqual([]);
     const unsub = bridge.watchBook(() => {});
     expect(typeof unsub).toBe("function");
     unsub();
+  });
+
+  it("rejects setApiKey and clearApiKey when keys api is absent", async () => {
+    const bridge = createElectronBridge(mockApi());
+    await expect(bridge.setApiKey("openai", "sk-x")).rejects.toThrow(
+      /Electron shell yet/,
+    );
+    await expect(bridge.clearApiKey("openai")).rejects.toThrow(
+      /Electron shell yet/,
+    );
+  });
+
+  it("delegates key operations when keys api is present", async () => {
+    const providers = [
+      { provider: "openai", configured: true },
+      { provider: "anthropic", configured: false },
+      { provider: "google", configured: false },
+      { provider: "custom", configured: false },
+    ];
+    const api = {
+      ...mockApi(),
+      keys: {
+        setApiKey: vi.fn(async () => {}),
+        clearApiKey: vi.fn(async () => {}),
+        listProviders: vi.fn(async () => providers),
+      },
+    };
+    const bridge = createElectronBridge(api);
+    await bridge.setApiKey("openai", "sk-test");
+    expect(api.keys.setApiKey).toHaveBeenCalledWith("openai", "sk-test");
+    await bridge.clearApiKey("openai");
+    expect(api.keys.clearApiKey).toHaveBeenCalledWith("openai");
+    expect(await bridge.listProviders()).toEqual(providers);
+    expect(api.keys.listProviders).toHaveBeenCalled();
   });
 
   it("throws for unsupported native operations", async () => {

@@ -2,6 +2,14 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
+const keys = {
+  setApiKey: (provider, key) =>
+    ipcRenderer.invoke("inscriva:keys:set", { provider, key }),
+  clearApiKey: (provider) =>
+    ipcRenderer.invoke("inscriva:keys:clear", provider),
+  listProviders: () => ipcRenderer.invoke("inscriva:keys:list"),
+};
+
 const book = {
   openBook: (path) => ipcRenderer.invoke("inscriva:book:openBook", path),
   listFiles: () => ipcRenderer.invoke("inscriva:book:listFiles"),
@@ -22,4 +30,5 @@ const book = {
 contextBridge.exposeInMainWorld("inscrivaElectron", {
   platform: "electron",
   book,
+  keys,
 });
