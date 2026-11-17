@@ -67,6 +67,9 @@ importers:
       electron:
         specifier: ^42.11.16
         version: 42.11.18
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       vitest:
         specifier: ^4.1.12
         version: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@24.19.2)(lightningcss@1.33.0)(tsx@4.22.1))
@@ -2915,7 +2918,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 4.1.12(@types/node@22.19.19)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@22.19.19)(lightningcss@1.33.0)(tsx@4.22.1))
+      vitest: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@24.19.2)(lightningcss@1.33.0)(tsx@4.22.1))
 
   '@vitest/expect@4.1.12':
     dependencies:

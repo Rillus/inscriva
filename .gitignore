@@ -7,6 +7,7 @@ dist/
 *.local
 .DS_Store
 coverage/
+apps/desktop-macos/electron/llm-bundle.mjs
 *.log
 .env
 .env.*
