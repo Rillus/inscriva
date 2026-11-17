@@ -289,5 +289,19 @@ export function createBookFs(options = {}) {
       fs.mkdirSync(libraryDir, { recursive: true });
       return libraryDir;
     },
+
+    /** @returns {string} */
+    getBookRoot() {
+      return requireRoot();
+    },
+
+    /**
+     * @param {string} bookPath
+     * @returns {boolean}
+     */
+    isBookApproved(bookPath) {
+      const resolved = path.resolve(bookPath);
+      return isApprovedBookRoot(resolved);
+    },
   };
 }

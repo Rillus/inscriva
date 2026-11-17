@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBookFs } from "./book-fs.mjs";
 import { createLlmKeyStore } from "./llm-keys.mjs";
+import { registerLlmIpc } from "./llm-proxy.mjs";
+import { runLlmStream } from "./llm-bundle.mjs";
 import {
   browserWindowOptions,
   isDevMode,
@@ -41,6 +43,15 @@ function registerKeysIpc() {
     getLlmKeyStore().clearKey(provider);
   });
   ipcMain.handle("inscriva:keys:list", () => getLlmKeyStore().listProviders());
+}
+
+function registerLlmProxy() {
+  registerLlmIpc({
+    ipcMain,
+    bookFs,
+    getKey: (provider) => getLlmKeyStore().getKey(provider),
+    runLlmStream,
+  });
 }
 
 function registerBookIpc() {
@@ -89,6 +100,7 @@ function createWindow() {
 app.whenReady().then(() => {
   registerBookIpc();
   registerKeysIpc();
+  registerLlmProxy();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

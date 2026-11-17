@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "tauri dev",
-    "dev:electron": "ELECTRON_DEV=1 electron .",
+    "bundle:llm": "node electron/bundle-llm.mjs",
+    "dev:electron": "pnpm bundle:llm && ELECTRON_DEV=1 electron .",
     "build": "pnpm --filter @inscriva/web build && tauri build",
-    "build:electron": "pnpm --filter @inscriva/web build && ELECTRON_DEV=0 electron .",
+    "build:electron": "pnpm --filter @inscriva/web build && pnpm bundle:llm && ELECTRON_DEV=0 electron .",
     "tauri": "tauri",
+    "pretest": "pnpm bundle:llm",
+    "pretest:coverage": "pnpm bundle:llm",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "node -e \"process.exit(0)\""
@@ -20,6 +23,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.5.0",
     "electron": "^42.11.16",
+    "esbuild": "^0.25.0",
     "vitest": "^4.1.12",
     "@vitest/coverage-v8": "^4.1.12"
   },

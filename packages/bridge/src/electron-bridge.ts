@@ -38,10 +38,29 @@ export interface ElectronBookApi {
   pickBookFolder(options?: PickFolderOptions): Promise<string | null>;
 }
 
+export interface ElectronLlmStreamPayload {
+  requestId: string;
+  text?: string;
+  error?: string;
+}
+
+export interface ElectronLlmApi {
+  startStream(request: LlmRequest, requestId: string): Promise<void>;
+  cancelStream(requestId: string): Promise<void>;
+  onChunk(
+    handler: (payload: { requestId: string; text: string }) => void,
+  ): () => void;
+  onError(
+    handler: (payload: { requestId: string; error: string }) => void,
+  ): () => void;
+  onDone(handler: (payload: { requestId: string }) => void): () => void;
+}
+
 export interface InscrivaElectronApi {
   platform: "electron";
   book: ElectronBookApi;
   keys?: ElectronKeysApi;
+  llm?: ElectronLlmApi;
 }
 
 function unavailable(): never {
@@ -49,8 +68,15 @@ function unavailable(): never {
 }
 
 /** Electron preload book IPC wrapped as an InscrivaBridge (partial native surface). */
+function newLlmRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `llm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
-  const { book, keys } = api;
+  const { book, keys, llm } = api;
 
   return {
     async getCapabilities(): Promise<BridgeCapabilities> {
@@ -179,14 +205,70 @@ export function createElectronBridge(api: InscrivaElectronApi): InscrivaBridge {
       return [];
     },
 
-    llmStream(_request: LlmRequest): AsyncIterable<string> {
+    llmStream(request: LlmRequest): AsyncIterable<string> {
+      if (!llm) {
+        return {
+          [Symbol.asyncIterator]() {
+            return {
+              next() {
+                return Promise.reject(new Error(NOT_AVAILABLE));
+              },
+            };
+          },
+        };
+      }
+
+      const llmApi = llm;
+      const requestId = newLlmRequestId();
+
       return {
-        [Symbol.asyncIterator]() {
-          return {
-            next() {
-              return Promise.reject(new Error(NOT_AVAILABLE));
-            },
+        async *[Symbol.asyncIterator]() {
+          const queue: string[] = [];
+          let resolveWait: (() => void) | null = null;
+          let done = false;
+          let streamError: string | null = null;
+
+          const wake = () => {
+            resolveWait?.();
+            resolveWait = null;
           };
+
+          const unlistenChunk = llmApi.onChunk((payload) => {
+            if (payload.requestId !== requestId) return;
+            if (payload.text) queue.push(payload.text);
+            wake();
+          });
+          const unlistenError = llmApi.onError((payload) => {
+            if (payload.requestId !== requestId) return;
+            streamError = payload.error ?? "LLM stream failed";
+            done = true;
+            wake();
+          });
+          const unlistenDone = llmApi.onDone((payload) => {
+            if (payload.requestId !== requestId) return;
+            done = true;
+            wake();
+          });
+
+          try {
+            await llmApi.startStream(request, requestId);
+
+            while (!done || queue.length > 0) {
+              if (streamError) throw new Error(streamError);
+              while (queue.length > 0) {
+                yield queue.shift()!;
+              }
+              if (done) break;
+              await new Promise<void>((resolve) => {
+                resolveWait = resolve;
+              });
+            }
+            if (streamError) throw new Error(streamError);
+          } finally {
+            unlistenChunk();
+            unlistenError();
+            unlistenDone();
+          }
         },
       };
     },

@@ -10,6 +10,8 @@ export default defineConfig({
         "electron/load-url.mjs",
         "electron/book-fs.mjs",
         "electron/llm-keys.mjs",
+        "electron/llm-proxy.mjs",
+        "electron/book-files-map.mjs",
       ],
       reporter: ["text", "text-summary"],
       thresholds: {

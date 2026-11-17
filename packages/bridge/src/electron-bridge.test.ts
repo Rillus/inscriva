@@ -118,4 +118,86 @@ describe("createElectronBridge", () => {
     const iter = stream[Symbol.asyncIterator]();
     await expect(iter.next()).rejects.toThrow(/Electron shell yet/);
   });
+
+  it("streams LLM chunks via the preload llm API", async () => {
+    const handlers: {
+      chunk?: (p: { requestId: string; text: string }) => void;
+      error?: (p: { requestId: string; error: string }) => void;
+      done?: (p: { requestId: string }) => void;
+    } = {};
+
+    let capturedRequestId = "";
+    const llm = {
+      startStream: vi.fn(async (_request: unknown, requestId: string) => {
+        capturedRequestId = requestId;
+        handlers.chunk?.({ requestId, text: "part-a" });
+        handlers.chunk?.({ requestId, text: "part-b" });
+        handlers.done?.({ requestId });
+      }),
+      cancelStream: vi.fn(async () => {}),
+      onChunk: vi.fn((handler) => {
+        handlers.chunk = handler;
+        return () => {};
+      }),
+      onError: vi.fn((handler) => {
+        handlers.error = handler;
+        return () => {};
+      }),
+      onDone: vi.fn((handler) => {
+        handlers.done = handler;
+        return () => {};
+      }),
+    };
+
+    const bridge = createElectronBridge({ ...mockApi(), llm });
+    const chunks: string[] = [];
+    for await (const part of bridge.llmStream({
+      taskId: "brainstorm",
+      provider: "openai",
+      model: "gpt-4o-mini",
+      bookId: "/books/x",
+      userInitiated: true,
+    })) {
+      chunks.push(part);
+    }
+
+    expect(chunks).toEqual(["part-a", "part-b"]);
+    expect(llm.startStream).toHaveBeenCalledTimes(1);
+    expect(capturedRequestId).toBeTruthy();
+  });
+
+  it("surfaces preload llm stream errors", async () => {
+    const handlers: {
+      error?: (p: { requestId: string; error: string }) => void;
+      done?: (p: { requestId: string }) => void;
+    } = {};
+
+    const llm = {
+      startStream: vi.fn(async (_request: unknown, requestId: string) => {
+        handlers.error?.({ requestId, error: "No API key configured for openai" });
+        handlers.done?.({ requestId });
+      }),
+      cancelStream: vi.fn(async () => {}),
+      onChunk: vi.fn(() => () => {}),
+      onError: vi.fn((handler) => {
+        handlers.error = handler;
+        return () => {};
+      }),
+      onDone: vi.fn((handler) => {
+        handlers.done = handler;
+        return () => {};
+      }),
+    };
+
+    const bridge = createElectronBridge({ ...mockApi(), llm });
+    const iter = bridge.llmStream({
+      taskId: "brainstorm",
+      provider: "openai",
+      model: "gpt",
+      bookId: "b",
+      userInitiated: true,
+    })[Symbol.asyncIterator]();
+
+    await expect(iter.next()).rejects.toThrow(/No API key configured/);
+  });
 });
